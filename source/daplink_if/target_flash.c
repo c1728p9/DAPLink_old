@@ -143,23 +143,6 @@ target_flash_status_t program_bin(uint32_t addr, uint8_t * buf, uint32_t size)
     const program_target_t * const flash = target_device.flash_algo;
 
     uint32_t bytes_written = 0;
-    target_flash_status_t status = TARGET_OK;
-
-	
-    // we need to erase a sector
-    if (addr % target_device.sector_size == 0) {
-#if defined(BOARD_LPC4337) || defined(BOARD_LPC11U68)
-		// takes care about different sector size
-		if ((addr < SECTOR_BOUNDARY) || ((addr >= SECTOR_BOUNDARY) && (addr % SECTOR_BOUNDARY_ALIGN == 0))) {
-			status = target_flash_erase_address(addr);
-		}
-#else
-        status = target_flash_erase_address(addr);
-#endif
-		if (status != TARGET_OK) {
-            return status;
-        }
-    }
 
     // Program a page in target flash.
     if (!swd_write_memory(flash->program_buffer, buf, size)) {
