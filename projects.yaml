@@ -85,3 +85,10 @@ projects:
         - records/common/rtos-cm0.yaml
         - records/projects/host_lpc11u35.yaml
         - records/projects/lpc11u35_nrf51822_if.yaml
+    lpc11u35_stm32f411_if:
+        - *module_tools
+        - *module_if
+        - records/common/rtos-cm0.yaml
+        - records/projects/host_lpc11u35.yaml
+        - records/projects/lpc11u35_stm32f411_if.yaml
+
