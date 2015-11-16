@@ -45,7 +45,7 @@ typedef struct file_transfer_state {
 
 // Must be bigger than 4x the flash size of the biggest supported
 // device.  This is to accomidate for hex file programming.
-static const uint32_t disc_size = MB(8);
+static const uint32_t disc_size = MB(20);
 
 static const char * const virtual_fs_auto_rstcfg = "AUTO_RSTCFG";
 static const char * const virtual_fs_hard_rstcfg = "HARD_RSTCFG";

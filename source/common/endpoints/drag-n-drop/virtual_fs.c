@@ -57,7 +57,7 @@ static const mbr_t mbr_tmpl = {
     // needs to match the root dir label
     /*char[11]*/.volume_label               = {'D','A','P','L','I','N','K','-','D','N','D'},
     // unused by msft - just a label (FAT, FAT12, FAT16)
-    /*char[8] */.file_system_type           = {'F','A','T','1','2',' ',' ',' '},
+    /*char[8] */.file_system_type           = {'F','A','T','1','6',' ',' ',' '},
 
     /* Executable boot code that starts the operating system */
     /*uint8_t[448]*/.bootstrap = {
@@ -119,26 +119,8 @@ static void write_dir1(void * user_data, uint32_t offset, const uint8_t* data, u
 
 static void write_fat(file_allocation_table_t * fat, uint32_t fat_idx, uint16_t val)
 {
-    uint8_t low_idx;
-    uint8_t high_idx;
-    uint8_t low_data;
-    uint8_t high_data;
-
-    low_idx = fat_idx * 3 / 2;
-    high_idx = fat_idx * 3 / 2 + 1;
-    if (fat_idx & 1) {
-        // Odd - lower byte shared
-        low_data = (val << 4) & 0xF0;
-        high_data = (val >> 4) & 0xFF;
-        fat->f[low_idx] = fat->f[low_idx] | low_data;
-        fat->f[high_idx] = high_data;
-    } else {
-        // Even - upper byte shared
-        low_data = (val >> 0) & 0xFF;
-        high_data = (val >> 8) & 0x0F;
-        fat->f[low_idx] =  low_data;
-        fat->f[high_idx] = fat->f[high_idx] | high_data;
-    }
+    fat->f[fat_idx * 2 + 0] = (val >> 0) & 0xFF;
+    fat->f[fat_idx * 2 + 1] = (val >> 8) & 0xFF;
 }
 
 void vfs_init(vfs_fs_t *vfs, uint32_t disk_size, const vfs_filename_t drive_name)
@@ -146,6 +128,7 @@ void vfs_init(vfs_fs_t *vfs, uint32_t disk_size, const vfs_filename_t drive_name
     uint32_t i;
     mbr_t * mbr;
     uint32_t offset = 0;
+    uint32_t num_clusters = 0;
 
     // Clear everything
     memset(vfs, 0, sizeof(vfs_fs_t));
@@ -154,7 +137,10 @@ void vfs_init(vfs_fs_t *vfs, uint32_t disk_size, const vfs_filename_t drive_name
     mbr = &vfs->mbr;
     memcpy(mbr, &mbr_tmpl, sizeof(mbr_t));
     mbr->total_logical_sectors = ((disk_size + kB(64)) / mbr->bytes_per_sector);
-    mbr->logical_sectors_per_fat = (3 * (((mbr->total_logical_sectors / mbr->sectors_per_cluster) + 1023) / 1024));
+    // FAT table will likely be larger than needed, but this is allowed by the
+    // fat specification
+    num_clusters = mbr->total_logical_sectors / mbr->sectors_per_cluster;
+    mbr->logical_sectors_per_fat = (num_clusters * 2 + VFS_SECTOR_SIZE - 1) / VFS_SECTOR_SIZE;
 
     // Initailize virtual media
     // NOTE - everything in the virtual media must be a multiple of the sector size
@@ -197,9 +183,9 @@ void vfs_init(vfs_fs_t *vfs, uint32_t disk_size, const vfs_filename_t drive_name
     // Initialize FAT
     memset(&vfs->fat, 0, sizeof(vfs->fat));
     vfs->fat_idx = 0;
-    write_fat(&vfs->fat, vfs->fat_idx, 0xFF8);
+    write_fat(&vfs->fat, vfs->fat_idx, 0xFFF8); // Media type
     vfs->fat_idx++;
-    write_fat(&vfs->fat, vfs->fat_idx, 0xFFF);
+    write_fat(&vfs->fat, vfs->fat_idx, 0xFFFF); // FAT12 - always 0xFFF, FAT16 - dirty/clean (clean = 0xFFFF)
     vfs->fat_idx++;
 
     // Initialize root dir
@@ -228,7 +214,7 @@ void vfs_add_file(vfs_fs_t *vfs, const vfs_filename_t filename, vfs_file_config_
     //TODO - handle files larger than 1 sector
 
     // Fill in fat table
-    write_fat(&vfs->fat, vfs->fat_idx, 0xFFF);
+    write_fat(&vfs->fat, vfs->fat_idx, 0xFFFF);
     vfs->fat_idx++;
 
     // Update directory entry
