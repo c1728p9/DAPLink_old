@@ -8,3 +8,8 @@ common:
             - source/common/cmsis-core/nxp/lpc11u35
             - source/common/cmsis-core/nxp/lpc11u35/armcc
             - source/common/hal/nxp/lpc11u35
+
+tool_specific:
+    uvision:
+        template:
+            - records/tools/uvision_lpc.uvproj.tmpl
