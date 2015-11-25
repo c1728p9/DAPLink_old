@@ -47,7 +47,7 @@
 #define USBD_POWER                  0
 #define USBD_MAX_PACKET0            8
 #define USBD_DEVDESC_IDVENDOR       0x0D28
-#define USBD_DEVDESC_IDPRODUCT      0x0204
+#define USBD_DEVDESC_IDPRODUCT      0x1//0x0204
 #define USBD_DEVDESC_BCDDEVICE      0x0100
 
 //   <h> Configuration Settings
@@ -281,7 +281,7 @@
 //            <256=> 256 Bytes <512=> 512 Bytes <1024=> 1024 Bytes
 //       </h>
 //     </e>
-#define USBD_CDC_ACM_ENABLE             1
+#define USBD_CDC_ACM_ENABLE             0
 #define USBD_CDC_ACM_EP_INTIN           3
 #define USBD_CDC_ACM_EP_INTIN_STACK     144
 #define USBD_CDC_ACM_WMAXPACKETSIZE     16
