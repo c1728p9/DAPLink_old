@@ -169,7 +169,7 @@
 //         </h>
 //       </h>
 //     </e>
-#define USBD_MSC_ENABLE             1
+#define USBD_MSC_ENABLE             0
 #define USBD_MSC_EP_BULKIN          2
 #define USBD_MSC_EP_BULKOUT         2
 #define USBD_MSC_EP_BULKIN_STACK    600

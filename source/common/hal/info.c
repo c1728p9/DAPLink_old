@@ -20,7 +20,7 @@
 #include "target_config.h"
 #include "board.h"
 #include "read_uid.h"
-#include "virtual_fs.h"
+//#include "virtual_fs.h"
 
 // Raw variables
 static uint32_t host_id[4];

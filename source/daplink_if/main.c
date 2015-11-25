@@ -27,7 +27,7 @@
 #include "target_reset.h"
 #include "swd_host.h"
 #include "info.h"
-#include "virtual_fs_user.h"
+//#include "virtual_fs_user.h"
 #include "config_settings.h"
 
 // Event flags for main task
@@ -391,7 +391,7 @@ __task void main_task(void)
                         usb_state = USB_CONNECTING;
                         // Delay the connecting state before reconnecting to the host - improved usage with VMs
                         usb_state_count = USB_BUSY_TIME;
-                        USBD_MSC_MediaReady = 0;
+                        //USBD_MSC_MediaReady = 0;
                     }
                     break;
 
@@ -411,8 +411,8 @@ __task void main_task(void)
                             thread_started = 1;
                         }
                         usb_state = USB_CONNECTED;
-                        vfs_user_build_filesystem();
-                        USBD_MSC_MediaReady = 1;
+                        //vfs_user_build_filesystem();
+                        //USBD_MSC_MediaReady = 1;
                     }
                     break;
 
