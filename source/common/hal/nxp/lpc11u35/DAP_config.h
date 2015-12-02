@@ -395,7 +395,7 @@ static __forceinline void     PIN_nRESET_OUT (uint32_t bit) {
     if (bit) LPC_GPIO->DIR[0] &= ~PIN_nRESET; // input (pulled high external)
     else     LPC_GPIO->DIR[0] |=  PIN_nRESET; // output (low)
 #else
-    if (bit)
+    if (bit & 0x1)
         LPC_GPIO->SET[0] = (PIN_nRESET);
     else
         LPC_GPIO->CLR[0] = (PIN_nRESET);
