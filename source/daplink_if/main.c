@@ -388,6 +388,9 @@ __task void main_task(void)
                         if (config_get_auto_rst()) {
                             target_set_state(RESET_RUN);
                         }
+												
+												//vfs_user_prepare_disconnect();
+												
                         usb_state = USB_CONNECTING;
                         // Delay the connecting state before reconnecting to the host - improved usage with VMs
                         usb_state_count = USB_BUSY_TIME;
