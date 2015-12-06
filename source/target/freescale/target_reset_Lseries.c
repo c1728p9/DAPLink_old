@@ -25,7 +25,7 @@
 
 void target_before_init_debug(void)
 {
-    swd_set_target_reset(1);
+    // Do nothing
 }
 
 void board_init(void)
