@@ -70,8 +70,7 @@ typedef struct {
 
 static DAP_STATE dap_state;
 
-static uint8_t swd_read_core_register(uint32_t n, uint32_t *val);
-static uint8_t swd_write_core_register(uint32_t n, uint32_t val);
+static uint8_t swd_wait_until_halted(void) ;
 
 static void int2array(uint8_t * res, uint32_t data, uint8_t len) {
     uint8_t i = 0;
@@ -510,6 +509,25 @@ uint8_t swd_write_memory(uint32_t address, uint8_t *data, uint32_t size) {
     return 1;
 }
 
+uint8_t swd_halt()
+{
+    if (!swd_write_word(DBG_HCSR, DBGKEY | C_DEBUGEN | C_HALT)) {
+        return 0;
+    }
+    if (!swd_wait_until_halted()) {
+        return 0;
+    }
+    return 1;
+}
+
+uint8_t swd_resume()
+{
+    if (!swd_write_word(DBG_HCSR, DBGKEY | C_DEBUGEN)) {
+        return 0;
+    }
+    return 1;
+}
+
 // Execute system call.
 static uint8_t swd_write_debug_state(DEBUG_STATE *state) {
     uint32_t i, status;
@@ -564,7 +582,7 @@ static uint8_t swd_write_debug_state(DEBUG_STATE *state) {
     return 1;
 }
 
-static uint8_t swd_read_core_register(uint32_t n, uint32_t *val) {
+uint8_t swd_read_core_register(uint32_t n, uint32_t *val) {
     int i = 0, timeout = 100;
     if (!swd_write_word(DCRSR, n)) {
         return 0;
@@ -593,7 +611,7 @@ static uint8_t swd_read_core_register(uint32_t n, uint32_t *val) {
     return 1;
 }
 
-static uint8_t swd_write_core_register(uint32_t n, uint32_t val) {
+uint8_t swd_write_core_register(uint32_t n, uint32_t val) {
     int i = 0, timeout = 100;
     if (!swd_write_word(DCRDR, val))
         return 0;
