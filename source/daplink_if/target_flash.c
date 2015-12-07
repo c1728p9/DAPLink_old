@@ -154,6 +154,16 @@ target_flash_status_t program_bin(uint32_t addr, uint8_t * buf, uint32_t size)
         return TARGET_FAIL_ALGO_DATA_SEQ;
     }
 
+		//mpl  - dummy write
+		    if (!swd_flash_syscall_exec(&flash->sys_call_s,
+                                    flash->program_page,
+                                    addr + target_device.flash_start,
+                                    flash->program_buffer_size,
+                                    flash->program_buffer + bytes_written,
+                                    0 )) {
+            return TARGET_FAIL_WRITE;
+        }
+		
     while(bytes_written < size) {
         if (!swd_flash_syscall_exec(&flash->sys_call_s,
                                     flash->program_page,
