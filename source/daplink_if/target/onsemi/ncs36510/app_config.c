@@ -28,7 +28,7 @@ const target_cfg_t target_device = {
     //  when variable sized sectors exist
     // .sector_cnt = ((.flash_end - .flash_start) / .sector_size);
     .sector_cnt     = 0x00000098,
-    .flash_start    = 0x00003000,
+    .flash_start    = 0x00002000,
     .flash_end      = 0x0004F000,
     .ram_start      = 0x3FFF4000,
     .ram_end        = 0x3FFFFFFF,
