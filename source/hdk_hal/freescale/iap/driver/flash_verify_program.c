@@ -64,7 +64,10 @@ status_t flash_verify_program(flash_driver_t * driver,
         kFCCOBx[0] = start;
         FTFx_FCCOBx_WR(FTFx, 0, FTFx_PROGRAM_CHECK);
         FTFx_FCCOBx_WR(FTFx, 4, margin);
-        kFCCOBx[2] = *(uint32_t *)expectedData;
+        kFCCOBx[2] = (uint32_t) ((expectedData[0] << 0) |
+                                 (expectedData[1] << 8) |
+                                 (expectedData[2] << 16) |
+                                 (expectedData[3] << 24));
 
         // calling flash command sequence function to execute the command
         returnCode = flash_command_sequence();

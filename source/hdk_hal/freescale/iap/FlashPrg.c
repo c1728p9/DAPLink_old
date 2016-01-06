@@ -133,7 +133,7 @@ int ProgramPage (unsigned long adr, unsigned long sz, unsigned char *buf)
     {
         // Must use kFlashMargin_User, or kFlashMargin_Factory for verify program
         status = flash_verify_program(&g_flash, adr, sz,
-                              (const uint8_t *)buf, kFlashMargin_User,
+                              buf, kFlashMargin_User,
                               NULL, NULL);
     }
     flash_cache_clear();
