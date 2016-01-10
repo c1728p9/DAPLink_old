@@ -29,6 +29,10 @@
 static const daplink_info_t * const info_bl = (daplink_info_t *)(DAPLINK_ROM_BL_START + DAPLINK_INFO_OFFSET);
 static const daplink_info_t * const info_if = (daplink_info_t *)(DAPLINK_ROM_IF_START + DAPLINK_INFO_OFFSET);
 
+// Placeholder for the real CRC
+__attribute__((section("image_crc")))
+volatile const uint32_t image_crc = 0x0;
+
 // Raw variables
 static uint32_t host_id[4];
 static uint32_t target_id[4];
@@ -165,6 +169,10 @@ void info_init(void)
     setup_basics();
     setup_unique_id();
     setup_string_descriptor();
+
+    // Access CRC so it is not garbage collected
+    // out of the image
+    image_crc;
 }
 
 void info_set_uuid_target(uint32_t *uuid_data)
