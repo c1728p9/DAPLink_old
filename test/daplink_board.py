@@ -25,6 +25,7 @@ import binascii
 import itertools
 import mbedapi
 import mbed_lstools
+import test_daplink
 from intelhex import IntelHex
 from pyOCD.board import MbedBoard
 
@@ -220,6 +221,8 @@ class DaplinkBoard(object):
         self._mode = None
         self._assert = None
         self._check_fs_on_remount = False
+        self._interface_hex = None
+        self._bootloader_hex = None
         self._update_board_info()
 
     def get_unique_id(self):
@@ -307,6 +310,12 @@ class DaplinkBoard(object):
             test_info.failure("Board in wrong mode: %s" % new_mode)
             raise Exception("Could not change board mode")
 
+    def get_interface_hex(self):
+        return self._interface_hex
+
+    def get_bootloader_hex(self):
+        return self._bootloader_hex
+
     def set_build_login(self, username, password):
         assert isinstance(username, six.string_types)
         assert isinstance(password, six.string_types)
@@ -320,6 +329,17 @@ class DaplinkBoard(object):
     def set_check_fs_on_remount(self, enabled):
         assert isinstance(enabled, bool)
         self._check_fs_on_remount = enabled
+
+    def set_interface_hex(self, interface_hex):
+        assert os.path.isfile(interface_hex)
+        self._interface_hex = interface_hex
+
+    def set_bootloader_hex(self, bootloader_hex):
+        assert os.path.isfile(bootloader_hex)
+        self._bootloader_hex = bootloader_hex
+
+    def run_board_test(self, parent_test):
+        test_daplink.daplink_test(self, parent_test)
 
     def build_target_firmware(self, parent_test):
         """
