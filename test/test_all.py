@@ -304,24 +304,24 @@ class ProjectTester(object):
             # and check on every remount
             board.test_fs(self._test_info)
             board.set_check_fs_on_remount(True)
-#
-#            # Run board specific tests
-#            if self._test_board:
-#                if_hex = self.get_hex()
-#                bl_hex = None
-#                bl = self.get_bl()
-#                if bl is not None:
-#                    bl_hex = bl.get_hex()
-#                board.set_interface_hex(if_hex)
-#                board.set_bootloader_hex(bl_hex)
-#                board.run_board_test(self._test_info)
-#
-#                # Test bootloader
-#
-#                # TODO - run these on every remount
-#                # Test interface
-#
-#                #board.test_fs_contents(self._test_info)
+
+            # Run board specific tests
+            if self._test_board:
+                if_hex = self.get_hex()
+                bl_hex = None
+                bl = self.get_bl()
+                if bl is not None:
+                    bl_hex = bl.get_hex()
+                board.set_interface_hex(if_hex)
+                board.set_bootloader_hex(bl_hex)
+                board.run_board_test(self._test_info)
+
+                # Test bootloader
+
+                # TODO - run these on every remount
+                # Test interface
+
+                #board.test_fs_contents(self._test_info)
 
             # Test endpoint
             if self._test_ep:
