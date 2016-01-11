@@ -28,32 +28,37 @@ from pyOCD.board import MbedBoard
 
 TEST_REPO = 'https://developer.mbed.org/users/c1728p9/code/daplink-validation/'
 
-# This prevents the following error message from getting
-# displayed on windows if the mbed dismounts unexpectedly
-# during a transfer:
-#   There is no disk in the drive. Please insert a disk into
-#   drive \Device\<Harddiskx>\<rdrive>
-if sys.platform.startswith("win"):
-    import ctypes
-    SEM_FAILCRITICALERRORS = 1
-    GetErrorMode = ctypes.windll.kernel32.GetErrorMode
-    GetErrorMode.restype = ctypes.c_uint
-    GetErrorMode.argtypes = []
-    SetErrorMode = ctypes.windll.kernel32.SetErrorMode
-    SetErrorMode.restype = ctypes.c_uint
-    SetErrorMode.argtypes = [ctypes.c_uint]
-
-    err_mode = GetErrorMode()
-    err_mode |= SEM_FAILCRITICALERRORS
-    SetErrorMode(err_mode)
-
-board_id_to_build_target = {
+BOARD_ID_TO_BUILD_TARGET = {
     0x0231: 'FRDM-K22F',
     0x1050: 'NXP-LPC800-MAX',
     0x0240: 'FRDM-K64F',
     0x9900: 'Microbit',
     0x1100: 'Nordic-nRF51-DK',
 }
+
+
+# This prevents the following error message from getting
+# displayed on windows if the mbed dismounts unexpectedly
+# during a transfer:
+#   There is no disk in the drive. Please insert a disk into
+#   drive \Device\<Harddiskx>\<rdrive>
+def disable_popup():
+    if sys.platform.startswith("win"):
+        # pylint: disable=invalid-name
+        import ctypes
+        SEM_FAILCRITICALERRORS = 1
+        GetErrorMode = ctypes.windll.kernel32.GetErrorMode
+        GetErrorMode.restype = ctypes.c_uint
+        GetErrorMode.argtypes = []
+        SetErrorMode = ctypes.windll.kernel32.SetErrorMode
+        SetErrorMode.restype = ctypes.c_uint
+        SetErrorMode.argtypes = [ctypes.c_uint]
+
+        err_mode = GetErrorMode()
+        err_mode |= SEM_FAILCRITICALERRORS
+        SetErrorMode(err_mode)
+
+disable_popup()
 
 
 def get_all_attached_daplink_boards():
@@ -135,21 +140,20 @@ def _parse_kvp_file(file_path, parent_test=None):
 
 class AssertInfo(object):
 
-    def __init__(self, file, line):
-        self._file = file
-        self._line = line
-    
+    def __init__(self, file_name, line_number):
+        self._file = file_name
+        self._line = line_number
+
     @property
     def file(self):
         return self._file
-        
+
     @property
     def line(self):
         return self._line
-        
 
-class DaplinkBoard:
 
+class DaplinkBoard(object):
 
     MODE_IF = "interface"
     MODE_BL = "bootloader"
@@ -219,9 +223,9 @@ class DaplinkBoard:
         assert self._mode in (DaplinkBoard.MODE_BL, DaplinkBoard.MODE_IF)
         return self._mode
 
-    def get_file_path(self, file):
+    def get_file_path(self, file_name):
         """Convenience function to the path to a file on the drive"""
-        return os.path.normpath(self.mount_point + os.sep + file)
+        return os.path.normpath(self.mount_point + os.sep + file_name)
 
     def get_target_hex_path(self):
         assert self._target_firmware_present
@@ -287,7 +291,7 @@ class DaplinkBoard:
             destdir = self._target_dir
         else:
             destdir = 'tmp'
-        build_name = board_id_to_build_target[self.get_board_id()]
+        build_name = BOARD_ID_TO_BUILD_TARGET[self.get_board_id()]
         name_base = os.path.normpath(destdir + os.sep + build_name)
         self._target_hex_path = name_base + '.hex'
         self._target_bin_path = name_base + '.bin'
@@ -499,27 +503,27 @@ class DaplinkBoard:
             return
 
         # Check for required keys
-        required_keys = required_key_and_format.keys()
-        for key in required_keys:
-            if not key in details_txt:
+        for key in required_key_and_format:
+            if key not in details_txt:
                 test_info.failure("Missing detail.txt entry: %s" % key)
                 continue
 
             value = details_txt[key]
             pattern = required_key_and_format[key]
             if pattern.match(value) is None:
-                test_info.failure("Bad format detail.txt %s: %s" % (key, value))
+                test_info.failure("Bad format detail.txt %s: %s" %
+                                  (key, value))
 
         # Check format of optional values
-        optional = optional_key_and_format.keys()
         for key in optional_key_and_format:
-            if not key in details_txt:
+            if key not in details_txt:
                 continue
 
             value = details_txt[key]
             pattern = optional_key_and_format[key]
             if pattern.match(value) is None:
-                test_info.failure("Bad format detail.txt %s: %s" % (key, value))
+                test_info.failure("Bad format detail.txt %s: %s" %
+                                  (key, value))
 
         # Check details.txt contents
         details_unique_id = None
