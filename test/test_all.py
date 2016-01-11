@@ -126,15 +126,15 @@ class ProjectTester(object):
                                       self._tool + os.sep + self.name +
                                       os.sep + 'build')
         self._hex_file = os.path.normpath(build_path + os.sep +
-                                          self.name + '.hex')
+                                          self.name + '_crc.hex')
         self._bin_file = os.path.normpath(build_path + os.sep +
-                                          self.name + '.bin')
+                                          self.name + '_crc.bin')
 
         # By default test all configurations and boards
         self._only_test_first = False
         self._load_if = True
         self._load_bl = True
-        self._test_if_bl = True
+        self._test_board = True
         self._test_ep = True
 
     def is_bl(self):
@@ -170,12 +170,26 @@ class ProjectTester(object):
         assert not self._is_bl
         self._bl = bl_prj
 
+    def get_bl(self):
+        """
+        Get the bootloader project for this interface project
+
+        return None if there is not a bootloader for this project
+
+        Note - this function should only be called on
+        an interface project.
+        """
+        assert not self._is_bl
+        return self._bl
+
     def get_binary(self):
         """
         Get the binary file associated with this project
 
         Returns None if the bin file has not been created yet.
         """
+        if self._bin_file is None:
+            return None
         return self._bin_file if os.path.isfile(self._bin_file) else None
 
     def get_hex(self):
@@ -184,6 +198,8 @@ class ProjectTester(object):
 
         Returns None if the hex file has not been created yet.
         """
+        if self._hex_file is None:
+            return None
         return self._hex_file if os.path.isfile(self._hex_file) else None
 
     def get_board_id(self):
@@ -204,23 +220,34 @@ class ProjectTester(object):
     def get_test_info(self):
         return self._test_info
 
-    def build(self, clean=True):
-        self._test_info.info("Building %s" % self.name)
+    def build(self, clean=True, parent_test=None):
+        test_info = parent_test or self._test_info
+        if self._built:
+            # Project already built so return
+            return
+
+        # Build bootloader if there is one
+        bl = None
+        if not self.is_bl():
+            bl = self.get_bl()
+        if bl is not None:
+            bl.build(clean, test_info)
+
+        # Build self
+        test_info.info("Building %s" % self.name)
         start = time.time()
-        #TODO - build bootloader if it isn't built yet
-        #TODO - print info on bootloader
         ret = self.prj.generate(self._tool, False)
-        self._test_info.info('Export return value %s' % ret)
+        test_info.info('Export return value %s' % ret)
         if ret != 0:
             raise Exception('Export return value %s' % ret)
         ret = self.prj.build(self._tool)
-        self._test_info.info('Build return value %s' % ret)
+        test_info.info('Build return value %s' % ret)
         if ret != 0:
             raise Exception('Build return value %s' % ret)
         files = self.prj.get_generated_project_files(self._tool)
         export_path = files['path']
         base_file = os.path.normpath(export_path + os.sep + 'build' +
-                                     os.sep + self.name)
+                                     os.sep + self.name + "_crc")
         built_hex_file = base_file + '.hex'
         built_bin_file = base_file + '.bin'
         assert (os.path.abspath(self._hex_file) ==
@@ -230,7 +257,7 @@ class ProjectTester(object):
         self._hex_file = built_hex_file
         self._bin_file = built_bin_file
         stop = time.time()
-        self._test_info.info('Build took %s seconds' % (stop - start))
+        test_info.info('Build took %s seconds' % (stop - start))
         self._built = True
 
     def test_set_first_board_only(self, first):
@@ -245,9 +272,9 @@ class ProjectTester(object):
         assert type(load) is bool
         self._load_bl = load
 
-    def test_set_test_if_bl(self, run_test):
+    def test_set_test_board(self, run_test):
         assert type(run_test) is bool
-        self._test_if_bl = run_test
+        self._test_board = run_test
 
     def test_set_test_ep(self, run_test):
         assert type(run_test) is bool
@@ -258,24 +285,43 @@ class ProjectTester(object):
         if self._only_test_first:
             boards_to_test = self._boards[0:1]
         for board in boards_to_test:
-            # Load interface & bootloader
+
+            # Load interface
             if self._load_if:
-                print("Loading interface")
+                self._test_info.info("Loading interface")
                 board.load_interface(self.get_hex(), self._test_info)
-                #TODO - check CRC
 
+            # Load bootloader
             if self._load_bl:
-                pass
-                #TODO - load bootloader
-                #TODO - check CRC
+                self._test_info.info("Loading bootloader")
+                bl = self.get_bl()
+                if bl is None:
+                    self._test_info.warning("Bootloader for project missing")
+                else:
+                    board.load_bootloader(bl.get_hex(), self._test_info)
 
-            if self._test_if_bl:
-
-                # Test bootloader
-
-                # Test interface
-                board.test_fs(self._test_info)
-                board.test_fs_contents(self._test_info)
+            # Make sure the filesystem is valid
+            # and check on every remount
+            board.test_fs(self._test_info)
+            board.set_check_fs_on_remount(True)
+#
+#            # Run board specific tests
+#            if self._test_board:
+#                if_hex = self.get_hex()
+#                bl_hex = None
+#                bl = self.get_bl()
+#                if bl is not None:
+#                    bl_hex = bl.get_hex()
+#                board.set_interface_hex(if_hex)
+#                board.set_bootloader_hex(bl_hex)
+#                board.run_board_test(self._test_info)
+#
+#                # Test bootloader
+#
+#                # TODO - run these on every remount
+#                # Test interface
+#
+#                #board.test_fs_contents(self._test_info)
 
             # Test endpoint
             if self._test_ep:

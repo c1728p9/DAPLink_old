@@ -21,6 +21,8 @@ import time
 import subprocess
 import sys
 import six
+import binascii
+import itertools
 import mbedapi
 import mbed_lstools
 from intelhex import IntelHex
@@ -99,6 +101,12 @@ def _get_board_endpoints(unique_id):
     return None
 
 
+def _ranges(i):
+    for _, b in itertools.groupby(enumerate(i), lambda x_y: x_y[1] - x_y[0]):
+        b = list(b)
+        yield b[0][1], b[-1][1]
+
+
 def _parse_kvp_file(file_path, parent_test=None):
     """Parse details.txt and return True if successful"""
     test_info = None
@@ -136,6 +144,35 @@ def _parse_kvp_file(file_path, parent_test=None):
                 continue
             kvp[key] = value
     return kvp
+
+
+def _compute_crc(hex_file_path):
+    # Read in hex file
+    new_hex_file = IntelHex()
+    new_hex_file.padding = 0xFF
+    new_hex_file.fromfile(hex_file_path, format='hex')
+
+    # Get the starting and ending address
+    addresses = new_hex_file.addresses()
+    addresses.sort()
+    start_end_pairs = list(_ranges(addresses))
+    regions = len(start_end_pairs)
+    assert regions == 1, ("Error - only 1 region allowed in "
+                          "hex file %i found." % regions)
+    start, end = start_end_pairs[0]
+
+    # Compute checksum over the range (don't include data at location of crc)
+    size = end - start + 1
+    crc_size = size - 4
+    data = new_hex_file.tobinarray(start=start, size=crc_size)
+    data_crc32 = binascii.crc32(data) & 0xFFFFFFFF
+
+    # Grab the crc from the image
+    embedded_crc32 = (((new_hex_file[end - 3] & 0xFF) << 0) |
+                      ((new_hex_file[end - 2] & 0xFF) << 8) |
+                      ((new_hex_file[end - 1] & 0xFF) << 16) |
+                      ((new_hex_file[end - 0] & 0xFF) << 24))
+    return data_crc32, embedded_crc32
 
 
 class AssertInfo(object):
@@ -182,6 +219,7 @@ class DaplinkBoard(object):
         self._target_bin_path = None
         self._mode = None
         self._assert = None
+        self._check_fs_on_remount = False
         self._update_board_info()
 
     def get_unique_id(self):
@@ -220,7 +258,8 @@ class DaplinkBoard(object):
 
     def get_mode(self):
         """Return either MODE_IF or MODE_BL"""
-        assert self._mode in (DaplinkBoard.MODE_BL, DaplinkBoard.MODE_IF)
+        assert ((self._mode is DaplinkBoard.MODE_BL) or
+                (self._mode is DaplinkBoard.MODE_IF))
         return self._mode
 
     def get_file_path(self, file_name):
@@ -237,7 +276,8 @@ class DaplinkBoard(object):
 
     def set_mode(self, mode, parent_test):
         """Set the mode to either MODE_IF or MODE_BL"""
-        assert mode in (self.MODE_BL, self.MODE_IF)
+        assert ((mode is DaplinkBoard.MODE_BL) or
+                (mode is DaplinkBoard.MODE_IF))
         test_info = parent_test.create_subtest('set_mode')
         current_mode = self.get_mode()
         if current_mode is mode:
@@ -276,6 +316,10 @@ class DaplinkBoard(object):
     def set_build_prebuilt_dir(self, directory):
         assert isinstance(directory, six.string_types)
         self._target_dir = directory
+
+    def set_check_fs_on_remount(self, enabled):
+        assert isinstance(enabled, bool)
+        self._check_fs_on_remount = enabled
 
     def build_target_firmware(self, parent_test):
         """
@@ -395,6 +439,11 @@ class DaplinkBoard(object):
         test_info = parent_test.create_subtest('load_interface')
         self.set_mode(self.MODE_BL, test_info)
 
+        data_crc, crc_in_image = _compute_crc(filepath)
+        assert data_crc == crc_in_image, ("CRC in interface is wrong "
+                                          "expected 0x%x, found 0x%x" %
+                                          (data_crc, crc_in_image))
+
         filename = os.path.basename(filepath)
         with open(filepath, 'rb') as firmware_file:
             data = firmware_file.read()
@@ -406,9 +455,47 @@ class DaplinkBoard(object):
         test_info.info("programming took %s s" % (stop - start))
         self.wait_for_remount(test_info)
 
-    def load_bootloader(self):
+        # Check the CRC
+        self.set_mode(self.MODE_IF, test_info)
+        if DaplinkBoard.KEY_IF_CRC not in self.details_txt:
+            test_info.failure("No interface CRC in details.txt")
+            return
+        details_crc = int(self.details_txt[DaplinkBoard.KEY_IF_CRC], 0)
+        test_info.info("Interface crc: 0x%x" % details_crc)
+        if data_crc != details_crc:
+            test_info.failure("Interface CRC is wrong")
+
+    def load_bootloader(self, filepath, parent_test):
         """Load a bootloader binary or hex"""
-        raise Exception("Function not implemented")
+        test_info = parent_test.create_subtest('load_bootloader')
+        self.set_mode(self.MODE_IF, test_info)
+
+        # Check image CRC
+        data_crc, crc_in_image = _compute_crc(filepath)
+        assert data_crc == crc_in_image, ("CRC in bootloader is wrong "
+                                          "expected 0x%x, found 0x%x" %
+                                          (data_crc, crc_in_image))
+
+        filename = os.path.basename(filepath)
+        with open(filepath, 'rb') as firmware_file:
+            data = firmware_file.read()
+        out_file = self.get_file_path(filename)
+        start = time.time()
+        with open(out_file, 'wb') as firmware_file:
+            firmware_file.write(data)
+        stop = time.time()
+        test_info.info("programming took %s s" % (stop - start))
+        self.wait_for_remount(test_info)
+
+        # Check the CRC
+        self.set_mode(self.MODE_IF, test_info)
+        if DaplinkBoard.KEY_BL_CRC not in self.details_txt:
+            test_info.failure("No bootloader CRC in details.txt")
+            return
+        details_crc = int(self.details_txt[DaplinkBoard.KEY_BL_CRC], 0)
+        test_info.info("Bootloader crc: 0x%x" % details_crc)
+        if data_crc != details_crc:
+            test_info.failure("Bootloader CRC is wrong")
 
     def wait_for_remount(self, parent_test, wait_time=15):
         test_info = parent_test.create_subtest('wait_for_remount')
@@ -432,6 +519,12 @@ class DaplinkBoard(object):
             elapsed += 0.1
         stop = time.time()
         test_info.info("mount took %s s" % (stop - start))
+
+        # If enabled check the filesystem
+        if self._check_fs_on_remount:
+            self.test_fs(parent_test)
+            self.test_fs_contents(parent_test)
+            self.test_details_txt(parent_test)
 
     def _update_board_info(self, exptn_on_fail=True):
         """Update board info
@@ -460,7 +553,12 @@ class DaplinkBoard(object):
 
         self.mode = None
         if DaplinkBoard.KEY_MODE in self.details_txt:
-            self._mode = self.details_txt[DaplinkBoard.KEY_MODE]
+            DETAILS_TO_MODE = {
+                "interface": DaplinkBoard.MODE_IF,
+                "bootloader": DaplinkBoard.MODE_BL,
+            }
+            mode_str = self.details_txt[DaplinkBoard.KEY_MODE]
+            self._mode = DETAILS_TO_MODE[mode_str]
         else:
             # TODO - remove file check when old bootloader have been
             # updated
