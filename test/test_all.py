@@ -330,6 +330,17 @@ class ProjectTester(object):
         return not self._test_info.get_failed()
 
 
+def TestWorkspace(object):
+
+def get_test_configurations(boards, firmware):
+    # Rules
+    # 1. Firmware can only run on boards with the same HDK ID
+    # 2. If firmware has a board ID it must only run on a board with that ID
+    # Notes
+    # - A board can have several firmware images
+    # - A firmware image can have several boards
+    
+
 def main():
     # Save current directory
     cur_dir = os.getcwd()
@@ -367,16 +378,19 @@ def main():
     description = 'DAPLink validation and testing tool'
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--targetdir',
-                        help='Directory with pre-build target test images.',
+                        help='Directory with pre-built target test images.',
                         default=None)
     parser.add_argument('--user', type=str, default=None,
                         help='MBED username (required for compile-api)')
     parser.add_argument('--password', type=str, default=None,
                         help='MBED password (required for compile-api)')
-    parser.add_argument('--project', help='Project to test', action='append',
+    parser.add_argument('--firmwaredir',
+                        help='Directory with firmware images to test',
+                        default=None)
+    parser.add_argument('--project', help='Project to test', action='append',#TODO - change to firmware
                         choices=prj_names, default=[], required=False)
-    parser.add_argument('--nobuild', help='Skip build step.  Binaries must have been built already.', default=False,
-                        action='store_true')
+#    parser.add_argument('--nobuild', help='Skip build step.  Binaries must have been built already.', default=False,
+#                        action='store_true')
     parser.add_argument('--noloadif', help='Skip load step for interface.',
                         default=False, action='store_true')
     parser.add_argument('--noloadbl', help='Skip load step for bootloader.',
@@ -387,6 +401,7 @@ def main():
                         default=False, action='store_true')
     parser.add_argument('--verbose', help='Verbose output',
                         choices=VERB_LEVELS, default=VERB_NORMAL)
+    # TODO - test results
     args = parser.parse_args()
 
     use_prebuilt = args.targetdir is not None
@@ -405,6 +420,71 @@ def main():
             exit(-1)
 
     boards_explicitly_specified = len(args.project) != 0
+
+    # determine which tests should be run
+
+        # By default test every attached board with every firmware that can run on that board, give warning about untested boards
+            # Simplifications
+            # - 0 or 1 bootloaders per board
+            # - interface firmware only works on 1 board
+
+        # Alternative - use only boards explicitly specified
+
+    # Build firmware if requested
+    build_projects("")
+
+    # Build targets if requested
+
+    # Determine which tests to run
+    bundle = load_bundle_from_project()
+    all_firmware = bundle.get_firmware_list()
+    all_boards = get_all_attached_daplink_boards()
+
+
+    tm = TestManager()
+    tm.add_firmware(all_firmware)
+    tm.add_board(all_boards)
+    tm.add_targets(all_targets)
+    tm.can_test_all_boards()
+    tm.can_test_all_firmware()
+    tm.set_test_first_board_only(args.testfirst)
+    tm.set_load_if(not args.noloadif)
+    tm.set_load_bl(not args.noloadbl)
+    tm.set_test_ep(not args.notestendpt)
+    tm.set_test_daplink(True) #TODO - arg for this
+    test_configuration_list = tm.get_test_configurations()
+
+
+            project.test_set_first_board_only(args.testfirst)
+            project.test_set_load_if(not args.noloadif)
+            project.test_set_load_bl(not args.noloadbl)
+            project.test_set_test_ep(not args.notestendpt)
+
+    tm.get_untested_firmware()
+    tm.get_untested_boards()
+
+    # Run tests
+
+        # Load interface
+
+        # Load bootloader
+
+
+    # bootloader + interface + board + target
+    
+    # Attach each interface firmware to a test object
+    test_list = get_test_configurations(all_firmware, all_boards, all_targets)
+    
+    for firmware in firmware_list:
+        for board in all_boards:
+            for bootloader in all_bootloaders
+        if firmware.board_id is None:
+        else:
+
+    workspace = TestWorkspace()
+
+    
+
 
     # Put together the list of projects to build
     if boards_explicitly_specified:
