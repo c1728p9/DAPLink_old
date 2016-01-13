@@ -330,7 +330,11 @@ class ProjectTester(object):
         return not self._test_info.get_failed()
 
 
-def TestWorkspace(object):
+class TestWorkspace(object):
+    pass
+    
+class TestManager(object):
+    
 
 def get_test_configurations(boards, firmware):
     # Rules
@@ -453,12 +457,7 @@ def main():
     tm.set_test_ep(not args.notestendpt)
     tm.set_test_daplink(True) #TODO - arg for this
     test_configuration_list = tm.get_test_configurations()
-
-
-            project.test_set_first_board_only(args.testfirst)
-            project.test_set_load_if(not args.noloadif)
-            project.test_set_load_bl(not args.noloadbl)
-            project.test_set_test_ep(not args.notestendpt)
+)
 
     tm.get_untested_firmware()
     tm.get_untested_boards()
