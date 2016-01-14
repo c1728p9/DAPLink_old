@@ -108,4 +108,4 @@ class Target(object):
 
     @property
     def bin_path(self):
-        return self._hex_path
+        return self._bin_path

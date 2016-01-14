@@ -183,9 +183,9 @@ def test_mass_storage(workspace, parent_test):
 
     # Setup test
     board = workspace.board
-    interface = workspace.if_firmware
-    bin_file = interface.bin_path
-    hex_file = interface.hex_path
+    target = workspace.target
+    bin_file = target.bin_path
+    hex_file = target.hex_path
     with open(bin_file, 'rb') as test_file:
         bin_file_contents = bytearray(test_file.read())
     with open(hex_file, 'rb') as test_file:

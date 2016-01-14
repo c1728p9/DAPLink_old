@@ -279,10 +279,11 @@ class TestManager(object):
         assert not self._testing_started
         self._testing_started = True
 
-        test_configuration_list = self._create_test_configurations()
-        for test_configuration in test_configuration_list:
+        self._test_configuration_list = self._create_test_configurations()
+        for test_configuration in self._test_configuration_list:
             board = test_configuration.board
             test_info = TestInfo(test_configuration.name)
+            test_configuration.test_info = test_info # TODO - how should this be handled?
 
             if self._load_if:
                 if_path = test_configuration.if_firmware.hex_path
@@ -301,20 +302,22 @@ class TestManager(object):
             if self._test_ep:
                 test_endpoints(test_configuration, test_info)
 
+        #TODO - set self._all_tests_pass
+
     def print_results(self, info_level):
         assert self._testing_started
         # Print info for boards tested
         for test_configuration in self._test_configuration_list:
             print('')
-            test_log = test_configuration.test_info
+            test_info = test_configuration.test_info
             if info_level == VERB_MINIMAL:
-                test_log.get_test_info().print_msg(TestInfo.FAILURE, 0)
+                test_info.print_msg(TestInfo.FAILURE, 0)
             elif info_level == VERB_NORMAL:
-                test_log.get_test_info().print_msg(TestInfo.WARNING, None)
+                test_info.print_msg(TestInfo.WARNING, None)
             elif info_level == VERB_VERBOSE:
-                test_log.get_test_info().print_msg(TestInfo.WARNING, None)
+                test_info.print_msg(TestInfo.WARNING, None)
             elif info_level == VERB_ALL:
-                test_log.get_test_info().print_msg(TestInfo.INFO, None)
+                test_info.print_msg(TestInfo.INFO, None)
             else:
                 # This should never happen
                 assert False
