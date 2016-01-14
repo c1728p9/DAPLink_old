@@ -18,15 +18,19 @@ from __future__ import absolute_import
 from msd_test import MassStorageTester
 
 
-def daplink_test(board, parent_test):
+def daplink_test(workspace, parent_test):
+    board = workspace.board
+    interface = workspace.if_firmware
     test_info = parent_test.create_subtest('daplink_test')
 
-    if_hex = board.get_interface_hex()
-    bl_hex = board.get_bootloader_hex()
+#    if_hex = board.get_interface_hex()
+#    bl_hex = board.get_bootloader_hex()
+
+    board.set_mode(board.MODE_BL, test_info)
 
     # Test loading a binary file with shutils
     test = MassStorageTester(board, test_info, "Shutil hex file load")
-    test.set_shutils_copy(bl_hex)
+    test.set_shutils_copy(interface.hex_path)
     test.set_expected_data(None)
     test.run()
 

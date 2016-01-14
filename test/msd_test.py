@@ -167,7 +167,7 @@ class MassStorageTester(object):
                 test_info.info("Data matches")
 
 
-def test_mass_storage(board, parent_test):
+def test_mass_storage(workspace, parent_test):
     """Test the mass storage endpoint
 
     Requirements:
@@ -182,8 +182,10 @@ def test_mass_storage(board, parent_test):
     test_info = parent_test.create_subtest('test_mass_storage')
 
     # Setup test
-    bin_file = board.get_target_bin_path()
-    hex_file = board.get_target_hex_path()
+    board = workspace.board
+    interface = workspace.if_firmware
+    bin_file = interface.bin_path
+    hex_file = interface.hex_path
     with open(bin_file, 'rb') as test_file:
         bin_file_contents = bytearray(test_file.read())
     with open(hex_file, 'rb') as test_file:

@@ -75,6 +75,7 @@ from test_info import TestInfo
 from daplink_firmware import load_bundle_from_project, load_bundle_from_release
 from firmware import Firmware
 from target import load_target_bundle
+from test_daplink import daplink_test
 
 TEST_REPO = 'https://developer.mbed.org/users/c1728p9/code/daplink-validation/'
 
@@ -86,13 +87,13 @@ VERB_ALL = 'All'            # All errors
 VERB_LEVELS = [VERB_MINIMAL, VERB_NORMAL, VERB_VERBOSE, VERB_ALL]
 
 
-def test_endpoints(board, parent_test):
+def test_endpoints(workspace, parent_test):
     """Run tests to validate DAPLINK fimrware"""
     test_info = parent_test.create_subtest('test_endpoints')
-    board.build_target_firmware(test_info)
-    test_hid(board, parent_test)
-    test_serial(board, test_info)
-    test_mass_storage(board, test_info)
+    #board.build_target_firmware(test_info)
+    test_hid(workspace, parent_test)
+    test_serial(workspace, test_info)
+    test_mass_storage(workspace, test_info)
 
 
 ## Determine interface or bootloader - also check if name is valid
@@ -287,14 +288,15 @@ class TestManager(object):
                 if_path = test_configuration.if_firmware.hex_path
                 board.load_interface(if_path, test_info)
 
-            if self._load_bl:
+            valid_bl = test_configuration.bl_firmware is not None
+            if self._load_bl and valid_bl:
                 bl_path = test_configuration.bl_firmware.hex_path
                 board.load_bootloader(bl_path, test_info)
 
             board.set_check_fs_on_remount(True)
 
             if self._test_daplink:
-                board.run_board_test(test_configuration, test_info)
+                daplink_test(test_configuration, test_info)
 
             if self._test_ep:
                 test_endpoints(test_configuration, test_info)
