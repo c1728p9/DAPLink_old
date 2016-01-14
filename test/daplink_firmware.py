@@ -59,7 +59,7 @@ class ReleaseFirmwareBundle(firmware.FirmwareBundle):
                 assert False
         self._firmware_list = firmware_list
 
-    def get_all_firmware(self):
+    def get_firmware_list(self):
         return self._firmware_list
 
     @property
@@ -86,7 +86,7 @@ class ProjectFirmwareBundle(firmware.FirmwareBundle):
                 firmware_list.append(daplink_firmware)
         self._firmware_list = firmware_list
 
-    def get_all_firmware(self):
+    def get_firmware_list(self):
         return self._firmware_list
 
     @property
