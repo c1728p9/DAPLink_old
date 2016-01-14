@@ -212,17 +212,9 @@ class DaplinkBoard(object):
 
         self.unique_id = unique_id
         self.details_txt = None
-        self._target_firmware_present = False
-        self._username = None
-        self._password = None
-        self._target_dir = None
-        self._target_hex_path = None
-        self._target_bin_path = None
         self._mode = None
         self._assert = None
         self._check_fs_on_remount = False
-        self._interface_hex = None
-        self._bootloader_hex = None
         self._update_board_info()
 
     def get_unique_id(self):
@@ -230,6 +222,14 @@ class DaplinkBoard(object):
 
     def get_board_id(self):
         return self.board_id
+
+    @property
+    def hdk_id(self):
+        return self._hdk_id
+
+    @property
+    def name(self):
+        return BOARD_ID_TO_BUILD_TARGET[self.board_id]
 
     def get_serial_port(self):
         return self.serial_port
@@ -269,14 +269,6 @@ class DaplinkBoard(object):
         """Convenience function to the path to a file on the drive"""
         return os.path.normpath(self.mount_point + os.sep + file_name)
 
-    def get_target_hex_path(self):
-        assert self._target_firmware_present
-        return self._target_hex_path
-
-    def get_target_bin_path(self):
-        assert self._target_firmware_present
-        return self._target_bin_path
-
     def set_mode(self, mode, parent_test):
         """Set the mode to either MODE_IF or MODE_BL"""
         assert ((mode is DaplinkBoard.MODE_BL) or
@@ -310,89 +302,12 @@ class DaplinkBoard(object):
             test_info.failure("Board in wrong mode: %s" % new_mode)
             raise Exception("Could not change board mode")
 
-    def get_interface_hex(self):
-        return self._interface_hex
-
-    def get_bootloader_hex(self):
-        return self._bootloader_hex
-
-    def set_build_login(self, username, password):
-        assert isinstance(username, six.string_types)
-        assert isinstance(password, six.string_types)
-        self._username = username
-        self._password = password
-
-    def set_build_prebuilt_dir(self, directory):
-        assert isinstance(directory, six.string_types)
-        self._target_dir = directory
-
     def set_check_fs_on_remount(self, enabled):
         assert isinstance(enabled, bool)
         self._check_fs_on_remount = enabled
 
-    def set_interface_hex(self, interface_hex):
-        assert os.path.isfile(interface_hex)
-        self._interface_hex = interface_hex
-
-    def set_bootloader_hex(self, bootloader_hex):
-        assert os.path.isfile(bootloader_hex)
-        self._bootloader_hex = bootloader_hex
-
     def run_board_test(self, parent_test):
         test_daplink.daplink_test(self, parent_test)
-
-    def build_target_firmware(self, parent_test):
-        """
-        Build test firmware for the board
-
-        Login credentials must have been set with set_build_login.
-        """
-        prebuilt = self._target_dir is not None
-        build_login = (self._username is not None and
-                       self._password is not None)
-        assert prebuilt or build_login
-        if prebuilt:
-            destdir = self._target_dir
-        else:
-            destdir = 'tmp'
-        build_name = BOARD_ID_TO_BUILD_TARGET[self.get_board_id()]
-        name_base = os.path.normpath(destdir + os.sep + build_name)
-        self._target_hex_path = name_base + '.hex'
-        self._target_bin_path = name_base + '.bin'
-        # Build target test image if a prebuild location is not specified
-        if not prebuilt:
-            test_info = parent_test.create_subtest('build_target_test_firmware')
-            if not os.path.isdir(destdir):
-                os.mkdir(destdir)
-            # Remove previous build files
-            if os.path.isfile(self._target_hex_path):
-                os.remove(self._target_hex_path)
-            if os.path.isfile(self._target_bin_path):
-                os.remove(self._target_bin_path)
-            test_info.info('Starting remote build')
-            start = time.time()
-            built_file = mbedapi.build_repo(self._username, self._password,
-                                            TEST_REPO, build_name, destdir)
-            stop = time.time()
-            test_info.info("Build took %s seconds" % (stop - start))
-            extension = os.path.splitext(built_file)[1].lower()
-            assert extension == '.hex' or extension == '.bin'
-            if extension == '.hex':
-                intel_hex = IntelHex(built_file)
-                # Only supporting devices with the starting
-                # address at 0 currently
-                assert intel_hex.minaddr() == 0
-                intel_hex.tobinfile(self._target_bin_path)
-                os.rename(built_file, self._target_hex_path)
-            if extension == '.bin':
-                intel_hex = IntelHex()
-                intel_hex.loadbin(built_file, offset=0)
-                intel_hex.tofile(self._target_hex_path, 'hex')
-                os.rename(built_file, self._target_bin_path)
-        # Assert that required files are present
-        assert os.path.isfile(self._target_hex_path)
-        assert os.path.isfile(self._target_bin_path)
-        self._target_firmware_present = True
 
     def read_target_memory(self, addr, size, resume=True):
         assert self.get_mode() == self.MODE_IF
@@ -565,6 +480,7 @@ class DaplinkBoard(object):
         assert self.unique_id is not None
         assert self.mount_point is not None
         self.board_id = int(self.unique_id[0:4], 16)
+        self._hdk_id = int(self.unique_id[-8:], 16)
 
         # Note - Some legacy boards might not have details.txt
         details_txt_path = self.get_file_path("details.txt")

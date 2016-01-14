@@ -39,14 +39,23 @@ FIRMWARE_NAME_TO_BOARD_ID = {
     'sam3u2c_nrf51822_if': 0x1100,
 }
 
-# #TODO - grab these from mbedls
-# _BOARD_ID_TO_BUILD_TARGET = {
-#     0x0231: 'FRDM-K22F',
-#     0x1050: 'NXP-LPC800-MAX',
-#     0x0240: 'FRDM-K64F',
-#     0x9900: 'Microbit',
-#     0x1100: 'Nordic-nRF51-DK',
-# }
+TARGET_NAME_TO_BOARD_ID = {
+    'FRDM-K22F': 0x0231,
+    'NXP-LPC800-MAX': 0x1050,
+    'FRDM-K64F': 0x0240,
+    'Microbit': 0x9900,
+    'Nordic-nRF51-DK': 0x1100,
+}
+
+##TODO - grab these from mbedls
+#BOARD_ID_TO_BUILD_TARGET = {
+#    0x0231: 'FRDM-K22F',
+#    0x1050: 'NXP-LPC800-MAX',
+#    0x0240: 'FRDM-K64F',
+#    0x9900: 'Microbit',
+#    0x1100: 'Nordic-nRF51-DK',
+#}
+
 # 
 # #TODO - sanity check?
 # 
