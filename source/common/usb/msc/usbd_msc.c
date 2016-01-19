@@ -221,6 +221,10 @@ void USBD_MSC_MemoryWrite (void) {
     BulkLen = 0;
   }
 
+  if (Offset + BulkLen - 1 > USBD_MSC_BlockSize) {
+      while(1);
+  }
+      
   for (n = 0; n < BulkLen; n++) {
     USBD_MSC_BlockBuf[Offset + n] = USBD_MSC_BulkBuf[n];
   }
@@ -966,6 +970,7 @@ void USBD_MSC_BulkOut (void) {
       }
       break;
     case MSC_BS_CSW:
+        while(1);
       break;
     default:
       USBD_MSC_SetStallEP(usbd_msc_ep_bulkout);
