@@ -59,6 +59,7 @@ Verify that the USB endpoints are working correctly on
 an existing board with firmware already loaded:
 test_all.py --nobuild --noloadif --user <username> --password <password>
 """
+#TODO - udpate comment
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -279,6 +280,7 @@ class TestManager(object):
         assert not self._testing_started
         self._testing_started = True
 
+        all_tests_pass = True
         self._test_configuration_list = self._create_test_configurations()
         for test_configuration in self._test_configuration_list:
             board = test_configuration.board
@@ -302,7 +304,10 @@ class TestManager(object):
             if self._test_ep:
                 test_endpoints(test_configuration, test_info)
 
-        #TODO - set self._all_tests_pass
+            if test_info.get_failed():
+                all_tests_pass = False
+
+        self._all_tests_pass = all_tests_pass
 
     def print_results(self, info_level):
         assert self._testing_started
@@ -409,6 +414,7 @@ class TestManager(object):
             #TODO - check wich boards haven't been tested?
 
         return test_conf_list
+
 
 def get_firmware_names():
 
