@@ -23,7 +23,6 @@ import sys
 import six
 import binascii
 import itertools
-import mbedapi
 import mbed_lstools
 import test_daplink
 from intelhex import IntelHex

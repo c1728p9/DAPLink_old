@@ -75,10 +75,9 @@ from project_generator.generate import Generator
 from test_info import TestInfo
 from daplink_firmware import load_bundle_from_project, load_bundle_from_release
 from firmware import Firmware
-from target import load_target_bundle
+from target import load_target_bundle, build_target_bundle
 from test_daplink import daplink_test
 
-TEST_REPO = 'https://developer.mbed.org/users/c1728p9/code/daplink-validation/'
 
 # TODO - move somewhere else
 VERB_MINIMAL = 'Minimal'    # Just top level errors
@@ -452,10 +451,12 @@ def main():
             exit(-1)
 
     firmware_explicitly_specified = len(args.firmware) != 0
+    test_info = TestInfo('Build preperation')
     if args.targetdir is not None:
         target_dir = args.targetdir
     else:
         target_dir = '../tmp'
+        build_target_bundle(target_dir, args.user, args.password, test_info)
 
     #TODO Switch all boards out of bootloader mode
         #TODO

@@ -15,7 +15,13 @@
 #
 from __future__ import absolute_import
 import os
+import time
 import info
+import mbedapi
+from test_info import TestInfoStub
+from intelhex import IntelHex
+
+TEST_REPO = 'https://developer.mbed.org/users/c1728p9/code/daplink-validation/'
 
 
 def load_target_bundle(directory):
@@ -53,6 +59,53 @@ class TargetBundle(object):
     def get_target_list(self):
         """Return the target objects associated with this bundle"""
         return self._target_list
+
+
+def build_target_bundle(directory, username, password, parent_test=None):
+    """Build target firmware package"""
+    if parent_test is None:
+        parent_test = TestInfoStub()
+    target_names = info.TARGET_NAME_TO_BOARD_ID.keys()
+    for build_name in target_names:
+        name_base = os.path.normpath(directory + os.sep + build_name)
+        target_hex_path = name_base + '.hex'
+        target_bin_path = name_base + '.bin'
+
+        # Build target test image
+        test_info = parent_test.create_subtest('Building target %s' %
+                                               build_name)
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+        # Remove previous build files
+        if os.path.isfile(target_hex_path):
+            os.remove(target_hex_path)
+        if os.path.isfile(target_bin_path):
+            os.remove(target_bin_path)
+        test_info.info('Starting remote build')
+        start = time.time()
+        built_file = mbedapi.build_repo(username, password,
+                                        TEST_REPO, build_name,
+                                        directory)
+        stop = time.time()
+        test_info.info("Build took %s seconds" % (stop - start))
+        extension = os.path.splitext(built_file)[1].lower()
+        assert extension == '.hex' or extension == '.bin'
+        if extension == '.hex':
+            intel_hex = IntelHex(built_file)
+            # Only supporting devices with the starting
+            # address at 0 currently
+            assert intel_hex.minaddr() == 0
+            intel_hex.tobinfile(target_bin_path)
+            os.rename(built_file, target_hex_path)
+        if extension == '.bin':
+            intel_hex = IntelHex()
+            intel_hex.loadbin(built_file, offset=0)
+            intel_hex.tofile(target_hex_path, 'hex')
+            os.rename(built_file, target_bin_path)
+
+        # Assert that required files are present
+        assert os.path.isfile(target_hex_path)
+        assert os.path.isfile(target_bin_path)
 
 
 class Target(object):

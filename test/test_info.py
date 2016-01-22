@@ -148,7 +148,7 @@ class TestInfo(object):
 
     def _add_entry(self, entry_type, msg):
         if entry_type is self.SUBTEST:
-            assert isinstance(msg, type(self))
+            assert isinstance(msg, TestInfo)
             self._print_msg("SubTest: " + msg.get_name())
         else:
             assert isinstance(msg, six.string_types)
@@ -158,3 +158,17 @@ class TestInfo(object):
     @staticmethod
     def _print_msg(msg):
         print(msg)
+
+
+class TestInfoStub(TestInfo):
+
+    def __init__(self):
+        super(TestInfoStub, self).__init__('stub test')
+
+    def create_subtest(self, name):
+        assert isinstance(name, six.string_types)
+        return TestInfoStub()
+
+    @staticmethod
+    def _print_msg(msg):
+        pass
