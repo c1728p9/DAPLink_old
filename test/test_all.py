@@ -197,14 +197,39 @@ def test_endpoints(workspace, parent_test):
 #        stop = time.time()
 #        test_info.info('Build took %s seconds' % (stop - start))
 #        self._built = True
+#
+#class ConfigurationManager(object):
+#
+#
+#
+#
+#
 
-
-class TestWorkspace(object):
+class TestConfiguration(object):
 
     def __init__(self, name):
         self.name = name
-    #TODO - explicitly check fields?
+        self.board = None
+        self.target = None
+        self.if_firmware = None
+        self.bl_firmware = None
 
+    def __str__(self):
+        name_board = '<None>'
+        name_target = '<None>'
+        name_if_firmware = '<None>'
+        name_bl_firmware = '<None>'
+        if self.board is not None:
+            name_board = self.board.name
+        if self.target is not None:
+            name_target = self.target.name
+        if self.if_firmware is not None:
+            name_if_firmware = self.if_firmware.name
+        if self.bl_firmware is not None:
+            name_bl_firmware = self.bl_firmware.name
+        return "Board=%s Target=%s APP=%s BL=%s" % (name_board, name_target,
+                                                    name_if_firmware,
+                                                    name_bl_firmware)
 
 
 class TestManager(object):
@@ -224,6 +249,7 @@ class TestManager(object):
         self._testing_started = False
         self._test_configuration_list = None
         self._all_tests_pass = None
+        self._firmware_filter = None
 
     @property
     def all_tests_pass(self):
@@ -274,6 +300,10 @@ class TestManager(object):
         """Add targets to be used for testing"""
         assert not self._testing_started
         self._target_list.extend(target_list)
+
+    def set_firmware_filter(self, name_list):
+        assert self._firmware_filter is None
+        self._firmware_filter = set(name_list)
 
     def run_tests(self):
         # Tests can only be run once per TestManager instance
@@ -329,7 +359,26 @@ class TestManager(object):
 
     def get_untested_configurations(self):
         return [] #TODO
+    
+    def get_test_configurations(self):
+        return self._create_test_configurations()
 
+    def get_untested_firmware(self):
+        test_configs = self._create_test_configurations()
+        untested_firmware = set(self._firmware_list)
+        for test in test_configs:
+            if test.if_firmware in untested_firmware:
+                untested_firmware.remove(test.if_firmware)
+            if test.bl_firmware in untested_firmware:
+                untested_firmware.remove(test.bl_firmware)
+        untested_list = list(untested_firmware)
+        untested_list.sort()
+        return untested_list
+
+    def get_untested_boards(self):
+        return
+
+    #TODO - valid configs, invalid configs
     def _create_test_configurations(self):
 
         # Create table mapping each board id to a list of boards with that ID
@@ -353,12 +402,15 @@ class TestManager(object):
 
         # Create a list for bootloader firmware and interface firmware
         bootloader_firmware_list = []
-        interface_firmware_list = []
+        filtered_interface_firmware_list = []
         for firmware in self._firmware_list:
             if firmware.type == Firmware.TYPE.BOOTLOADER:
                 bootloader_firmware_list.append(firmware)
             elif firmware.type == Firmware.TYPE.INTERFACE:
-                interface_firmware_list.append(firmware)
+                name = firmware.name
+                if ((self._firmware_filter is None) or
+                        (name in self._firmware_filter)):
+                    filtered_interface_firmware_list.append(firmware)
             else:
                 assert False, 'Unsupported firmware type "%s"' % firmware.type
 
@@ -373,7 +425,7 @@ class TestManager(object):
         # Create a test configuration for each interface and supported board
         # combination
         test_conf_list = []
-        for firmware in interface_firmware_list:
+        for firmware in filtered_interface_firmware_list:
             board_id = firmware.board_id
             hdk_id = firmware.hdk_id
             bl_firmware = None
@@ -403,7 +455,7 @@ class TestManager(object):
                 if target is not None:
                     assert firmware.board_id == target.board_id
 
-                test_conf = TestWorkspace(firmware.name + ' ' + board.name)
+                test_conf = TestConfiguration(firmware.name + ' ' + board.name)
                 test_conf.if_firmware = firmware
                 test_conf.bl_firmware = bl_firmware
                 #TODO - record missing bootloader
@@ -453,7 +505,7 @@ def main():
     parser.add_argument('--firmwaredir',
                         help='Directory with firmware images to test',
                         default=None)
-    parser.add_argument('--firmware', help='Firmware to test', action='append',#TODO - change to firmware
+    parser.add_argument('--firmware', help='Firmware to test', action='append',
                         choices=firmware_choices, default=[], required=False)
 #    parser.add_argument('--nobuild', help='Skip build step.  Binaries must have been built already.', default=False,
 #                        action='store_true')
@@ -467,6 +519,9 @@ def main():
                         default=False, action='store_true')
     parser.add_argument('--verbose', help='Verbose output',
                         choices=VERB_LEVELS, default=VERB_NORMAL)
+    parser.add_argument('--dryrun', default=False, action='store_true',
+                        help='Print info on configurations but dont '
+                        'actually run tests.')
     # TODO - test results
     args = parser.parse_args()
 
@@ -485,7 +540,7 @@ def main():
             print("  the compile API.")
             exit(-1)
 
-    boards_explicitly_specified = len(args.firmware) != 0#TODO
+    firmware_explicitly_specified = len(args.firmware) != 0#TODO
     if args.targetdir is not None:
         target_dir = args.targetdir
     else:
@@ -500,7 +555,10 @@ def main():
     # Build targets if requested
 
     # Get all relevant info
-    firmware_bundle = load_bundle_from_project()#TODO or load from directory
+    if args.firmwaredir is None:
+        firmware_bundle = load_bundle_from_project()
+    else:
+        firmware_bundle = load_bundle_from_release(args.firmwaredir)
     target_bundle = load_target_bundle(target_dir)
     all_firmware = firmware_bundle.get_firmware_list()
     all_boards = get_all_attached_daplink_boards()
@@ -512,6 +570,32 @@ def main():
     tm.add_firmware(all_firmware)
     tm.add_boards(all_boards)
     tm.add_targets(all_targets)
+
+    if firmware_explicitly_specified:
+        tm.set_firmware_filter(args.firmware)
+
+    #TODO - exclude boards?
+    #TODO - open for only using specific board?
+
+
+    untested_list = tm.get_untested_firmware()
+
+    print('Test configurations to be run')
+    index = 0
+    for test_config in tm.get_test_configurations():
+        print('    %i: %s' % (index, test_config))
+        index += 1
+    print('')
+
+    print('Fimrware that will not be tested')
+    for untested_firmware in untested_list:
+        print('    %s' % untested_firmware.name)
+    print('')
+
+    if args.dryrun:
+        exit(0)
+    #print("Untested: %s" % tm.get_untested_firmware())
+
 #    tm.can_test_all_boards()    # TODO
 #    tm.can_test_all_firmware()
 
