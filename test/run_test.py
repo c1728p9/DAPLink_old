@@ -271,10 +271,10 @@ class TestManager(object):
                                self._STATE.COMPLETE)
         return self._untested_firmware
 
-    def build_test_configurations(self):
-        test_info = TestInfo('Create Test Configurations')
+    def build_test_configurations(self, parent_test):
         assert self._state is self._STATE.INIT
         self._state = self._STATE.CONFIGURED
+        test_info = parent_test.create_subtest('Build test configuration')
 
         # Create table mapping each board id to a list of boards with that ID
         board_id_to_board_list = {}
@@ -311,7 +311,6 @@ class TestManager(object):
             else:
                 assert False, 'Unsupported firmware type "%s"' % firmware.type
 
-        #TODO - make sure this is right
         # Explicitly specified boards must be present
         fw_name_set = set(fw.name for fw in filtered_interface_firmware_list)
         if self._firmware_filter is not None:
@@ -339,6 +338,7 @@ class TestManager(object):
             # and if not skip it
             if board_id not in board_id_to_board_list:
                 self._untested_firmware.append(firmware)
+                test_info.info('No board to test firmware %s' % firmware.name)
                 continue
 
             # Get target
@@ -348,6 +348,8 @@ class TestManager(object):
                 target = board_id_to_target[board_id]
             elif target_required:
                 self._untested_firmware.append(firmware)
+                test_info.info('No target to test firmware %s' %
+                               firmware.name)
                 continue
 
             # Check for a bootloader
@@ -357,6 +359,8 @@ class TestManager(object):
                 bl_firmware = hdk_id_to_bootloader[hdk_id]
             elif bl_required:
                 self._untested_firmware.append(firmware)
+                test_info.info('No bootloader to test firmware %s' %
+                               firmware.name)
                 continue
 
             # Create a test configuration for each board
@@ -451,27 +455,14 @@ def main():
             exit(-1)
 
     firmware_explicitly_specified = len(args.firmware) != 0
-    test_info = TestInfo('Build preperation')
+    test_info = TestInfo('DAPLink')
     if args.targetdir is not None:
         target_dir = args.targetdir
     else:
         target_dir = '../tmp'
         build_target_bundle(target_dir, args.user, args.password, test_info)
 
-    #TODO Switch all boards out of bootloader mode
-        #TODO
-#    # Attach firmware build credentials
-#    if not args.notestendpt:
-#        for board in all_boards:
-#            if args.targetdir is None:
-#                board.set_build_login(args.user, args.password)
-#            else:
-#                board.set_build_prebuilt_dir(args.targetdir)
-
-    #TODO - Build targets if requested
-        #board.build_target_firmware(test_info)
-
-    # Build targets if requested
+    # TODO - Switch all boards out of bootloader mode
 
     # Get all relevant info
     if args.firmwaredir is None:
@@ -490,9 +481,9 @@ def main():
         for firmware_name in args.firmware:
             if firmware_name not in all_firmware_names:
                 firmware_missing = True
-                print('Cannot find firmware %s' % firmware_name)
+                test_info.failure('Cannot find firmware %s' % firmware_name)
         if firmware_missing:
-            print('Firmware missing - aborting test')
+            test_info.failure('Firmware missing - aborting test')
             exit(-1)
 
     # Create manager and add resources
@@ -511,33 +502,31 @@ def main():
     tm.set_test_daplink(not args.notestdl)
 
     # Build test configurations
-    tm.build_test_configurations()
-#    if not tm.can_run_tests():
-#        print(tm.get_error_msg())
+    tm.build_test_configurations(test_info)
 
     test_config_list = tm.get_test_configurations()
     if len(test_config_list) == 0:
-        print("Nothing that can be tested")
+        test_info.failure("Nothing that can be tested")
         exit(-1)
     else:
-        print('Test configurations to be run:')
+        test_info.info('Test configurations to be run:')
         index = 0
         for test_config in test_config_list:
-            print('    %i: %s' % (index, test_config))
+            test_info.info('    %i: %s' % (index, test_config))
             index += 1
-    print('')
+    test_info.info('')
 
     untested_list = tm.get_untested_firmware()
     if len(untested_list) == 0:
-        print("All firmware can be tested")
+        test_info.info("All firmware can be tested")
     else:
-        print('Fimrware that will not be tested:')
+        test_info.info('Fimrware that will not be tested:')
         for untested_firmware in untested_list:
-            print('    %s' % untested_firmware.name)
-    print('')
+            test_info.info('    %s' % untested_firmware.name)
+    test_info.info('')
 
     if firmware_explicitly_specified and len(untested_list) != 0:
-        print("Exiting because not all firmware could be tested")
+        test_info.failure("Exiting because not all firmware could be tested")
         exit(-1)
 
     # If this is a dryrun don't run tests, just print info
@@ -550,6 +539,8 @@ def main():
     # Print test results
     tm.print_results(args.verbose)
     tm.write_test_results('../test_results')
+    #TODO - write test info to file
+    #test_info
 
     # Warn about untested boards
     print('')
