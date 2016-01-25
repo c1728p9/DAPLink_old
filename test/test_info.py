@@ -16,6 +16,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 import six
+import sys
 
 
 class TestInfo(object):
@@ -51,8 +52,8 @@ class TestInfo(object):
         assert isinstance(msg, six.string_types)
         self._add_entry(self.INFO, msg)
 
-    def print_msg(self, warning_level, max_recursion=0,
-                  spacing=2, _recursion_level=0):
+    def print_msg(self, warning_level, max_recursion=0, spacing=2,
+                  log_file=sys.stdout, _recursion_level=0):
         """
         Print problems at the given level
 
@@ -80,7 +81,8 @@ class TestInfo(object):
             return
 
         # Print test header
-        self._print_msg(prefix + "Test: %s: %s" % (self.name, result_str))
+        print(prefix + "Test: %s: %s" % (self.name, result_str),
+              file=log_file)
 
         # Check for recursion termination
         if max_recursion is not None and _recursion_level > max_recursion:
@@ -93,11 +95,11 @@ class TestInfo(object):
             if msg_level == self.SUBTEST:
                 test_info = msg
                 test_info.print_msg(warning_level, max_recursion,
-                                    spacing, _recursion_level)
+                                    spacing, log_file, _recursion_level)
             else:
                 fmt = prefix + self._MSG_LEVEL_TO_FMT_STR[msg_level]
                 if msg_level >= warning_level:
-                    self._print_msg(fmt % msg)
+                    print(fmt % msg, file=log_file)
 
     def get_failed(self):
         self._update_counts()

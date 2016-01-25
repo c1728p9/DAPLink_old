@@ -77,6 +77,7 @@ from firmware import Firmware
 from target import load_target_bundle, build_target_bundle
 from test_daplink import daplink_test
 
+DEFAULT_TEST_DIR = '../test_results'
 
 # TODO - move somewhere else
 VERB_MINIMAL = 'Minimal'    # Just top level errors
@@ -256,9 +257,18 @@ class TestManager(object):
                 # This should never happen
                 assert False
 
-    def write_test_results(self, directory):
-        #TODO
-        '../test_results'
+    def write_test_results(self, directory, info_level=TestInfo.INFO):
+        assert self._state is self._STATE.COMPLETE
+
+        assert not os.path.exists(directory)
+        os.mkdir(directory)
+        #TODO - log info about board
+
+        for test_configuration in self._test_configuration_list:
+            test_info = test_configuration.test_info
+            file_path = directory + os.sep + test_info.name + '.txt'
+            with open(file_path, 'w') as file_handle:
+                test_info.print_msg(info_level, None, log_file=file_handle)
 
     def get_test_configurations(self):
         assert self._state in (self._STATE.CONFIGURED,
@@ -419,6 +429,8 @@ def main():
                         default=None)
     parser.add_argument('--firmware', help='Firmware to test', action='append',
                         choices=firmware_choices, default=[], required=False)
+    parser.add_argument('--logdir', help='Directory to log test results to',
+                        default=DEFAULT_TEST_DIR)
     parser.add_argument('--noloadif', help='Skip load step for interface.',
                         default=False, action='store_true')
     parser.add_argument('--noloadbl', help='Skip load step for bootloader.',
@@ -435,7 +447,6 @@ def main():
     parser.add_argument('--dryrun', default=False, action='store_true',
                         help='Print info on configurations but dont '
                         'actually run tests.')
-    # TODO - test results
     args = parser.parse_args()
 
     use_prebuilt = args.targetdir is not None
@@ -460,6 +471,11 @@ def main():
     else:
         target_dir = '../tmp'
         build_target_bundle(target_dir, args.user, args.password, test_info)
+
+    if os.path.exists(args.logdir):
+        print('Error - test results directory "%s" already exists' %
+              args.logdir)
+        exit(-1)
 
     # TODO - Switch all boards out of bootloader mode
 
@@ -537,9 +553,7 @@ def main():
 
     # Print test results
     tm.print_results(args.verbose)
-    tm.write_test_results('../test_results')
-    #TODO - write test info to file
-    #test_info
+    tm.write_test_results(args.logdir)
 
     # Warn about untested boards
     print('')
