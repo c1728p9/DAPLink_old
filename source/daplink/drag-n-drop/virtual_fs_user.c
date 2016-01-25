@@ -643,6 +643,10 @@ static uint32_t read_file_assert_txt(uint32_t sector_offset, uint8_t* data, uint
 void transfer_update_file_info(vfs_file_t file, uint32_t start_sector, uint32_t size, stream_type_t stream)
 {
     vfs_user_printf("virtual_fs_user transfer_update_file_info(file=%p, start_sector=%i, size=%i)\r\n", file, start_sector, size);
+    if (file_transfer_state.transfer_finished) {
+        vfs_user_printf("    No work to do, transfer already done\r\n");
+        return;
+    }
 
     // Initialize the directory entry if it has not been set
     if (VFS_FILE_INVALID == file_transfer_state.file_to_program) {
@@ -686,6 +690,10 @@ static void transfer_update_stream_open(stream_type_t stream, uint32_t start_sec
     util_assert(!file_transfer_state.stream_open);
     vfs_user_printf("virtual_fs_user transfer_update_stream_open(stream=%i, start_sector=%i, status=%i)\r\n",
                     stream, start_sector, status);
+    if (file_transfer_state.transfer_finished) {
+        vfs_user_printf("    No work to do, transfer already done\r\n");
+        return;
+    }
 
     // Status should still be at it's default of ERROR_SUCCESS
     util_assert(ERROR_SUCCESS == file_transfer_state.status);
