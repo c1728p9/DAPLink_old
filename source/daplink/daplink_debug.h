@@ -29,7 +29,7 @@
  extern "C" {
 #endif
 
-#ifndef MSC_DEBUG
+#if !defined(MSC_DEBUG) && defined(CDC_ENDPOINT)
 #define MSC_DEBUG
 #endif
 

@@ -35,7 +35,7 @@
 #include "error.h"
 
 // Set to 1 to enable debugging
-#define DEBUG_VIRTUAL_FS_USER     1
+#define DEBUG_VIRTUAL_FS_USER     defined(CDC_ENDPOINT)
 
 #if DEBUG_VIRTUAL_FS_USER
     #define vfs_user_printf    debug_msg
