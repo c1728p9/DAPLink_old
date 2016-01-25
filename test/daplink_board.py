@@ -139,6 +139,7 @@ def _parse_kvp_file(file_path, parent_test=None):
             key = key.lower().replace(" ", "_")
             value = match.group(2)
             value = value.lower()
+            value = value.strip()
             if key in kvp:
                 if test_info is not None:
                     test_info.failure("Duplicate key %s" % key)
