@@ -20,7 +20,6 @@ import re
 import time
 import subprocess
 import sys
-import six
 import binascii
 import itertools
 import mbed_lstools
@@ -49,10 +48,12 @@ def disable_popup():
         # pylint: disable=invalid-name
         import ctypes
         SEM_FAILCRITICALERRORS = 1
-        GetErrorMode = ctypes.windll.kernel32.GetErrorMode
+        GetErrorMode = \
+            ctypes.windll.kernel32.GetErrorMode  # @UndefinedVariable
         GetErrorMode.restype = ctypes.c_uint
         GetErrorMode.argtypes = []
-        SetErrorMode = ctypes.windll.kernel32.SetErrorMode
+        SetErrorMode = \
+            ctypes.windll.kernel32.SetErrorMode  # @UndefinedVariable
         SetErrorMode.restype = ctypes.c_uint
         SetErrorMode.argtypes = [ctypes.c_uint]
 

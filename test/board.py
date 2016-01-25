@@ -15,16 +15,7 @@
 #
 from __future__ import absolute_import
 
-import os
-import re
-import time
-import subprocess
 import sys
-import six
-import mbedapi
-import mbed_lstools
-from intelhex import IntelHex
-from pyOCD.board import MbedBoard
 
 TEST_REPO = 'https://developer.mbed.org/users/c1728p9/code/daplink-validation/'
 
@@ -47,10 +38,12 @@ def disable_popup():
         # pylint: disable=invalid-name
         import ctypes
         SEM_FAILCRITICALERRORS = 1
-        GetErrorMode = ctypes.windll.kernel32.GetErrorMode
+        GetErrorMode = \
+            ctypes.windll.kernel32.GetErrorMode  # @UndefinedVariable
         GetErrorMode.restype = ctypes.c_uint
         GetErrorMode.argtypes = []
-        SetErrorMode = ctypes.windll.kernel32.SetErrorMode
+        SetErrorMode = \
+            ctypes.windll.kernel32.SetErrorMode  # @UndefinedVariable
         SetErrorMode.restype = ctypes.c_uint
         SetErrorMode.argtypes = [ctypes.c_uint]
 

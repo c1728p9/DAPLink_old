@@ -24,8 +24,9 @@ optional arguments:
   --password PASSWORD   MBED password (required for compile-api)
   --firmwaredir FIRMWAREDIR
                         Directory with firmware images to test
-  --firmware {k20dx_k64f_if,lpc11u35_efm32gg_stk_if,lpc11u35_lpc1114_if,kl26z_mi
-crobit_if,lpc11u35_lpc812_if,sam3u2c_nrf51822_if,kl26z_nrf51822_if,k20dx_k22f_if
+  --firmware {k20dx_k64f_if,lpc11u35_efm32gg_stk_if,lpc11u35_lpc1114_if,
+kl26z_microbit_if,lpc11u35_lpc812_if,sam3u2c_nrf51822_if,
+kl26z_nrf51822_if,k20dx_k22f_if
 }
                         Firmware to test
   --noloadif            Skip load step for interface.
@@ -63,8 +64,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
-import re
-import time
 import argparse
 from enum import Enum
 from hid_test import test_hid
