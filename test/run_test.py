@@ -559,6 +559,8 @@ def main():
     # Print test results
     tm.print_results(args.verbose)
     tm.write_test_results(args.logdir)
+    #TODO - LOG VERSION OF TOOLS USED!!!
+    #TODO - allow for running from any directory
 
     # Warn about untested boards
     print('')
