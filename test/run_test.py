@@ -375,9 +375,14 @@ class TestManager(object):
             # Create a test configuration for each board
             board_list = board_id_to_board_list[board_id]
             for board in board_list:
-                assert firmware.hdk_id == board.hdk_id
+                if firmware.hdk_id != board.hdk_id:
+                    test_info.warning('FW HDK ID %s != Board HDK ID %s' %
+                                      (firmware.hdk_id, board.hdk_id))
                 if bl_firmware is not None:
-                    assert firmware.hdk_id == bl_firmware.hdk_id
+                    if firmware.hdk_id != bl_firmware.hdk_id:
+                        test_info.warning('FW HDK ID %s != BL HDK ID %s' %
+                                          (firmware.hdk_id,
+                                           bl_firmware.hdk_id))
                 if target is not None:
                     assert firmware.board_id == target.board_id
 
