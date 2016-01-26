@@ -352,6 +352,9 @@ class DaplinkBoard(object):
         end_of_file_re = re.compile(end_of_file)
         for filename in files:
             filename = self.get_file_path(filename)
+            if not os.path.isfile(filename):
+                test_info.info("Skipping non file item %s" % filename)
+                continue
             with open(filename, 'rb') as file_handle:
                 file_contents = file_handle.read()
             if non_ascii_re.search(file_contents):
