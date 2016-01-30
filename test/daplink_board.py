@@ -37,6 +37,10 @@ BOARD_ID_TO_BUILD_TARGET = {
     0x1100: 'Nordic-nRF51-DK',
 }
 
+FILE_IGNORE_PATTERN_LIST = [
+    re.compile("\\._\\.Trashes")
+]
+
 
 # This prevents the following error message from getting
 # displayed on windows if the mbed dismounts unexpectedly
@@ -351,25 +355,33 @@ class DaplinkBoard(object):
         trail_white_re = re.compile(trail_white)
         end_of_file_re = re.compile(end_of_file)
         for filename in files:
-            filename = self.get_file_path(filename)
-            if not os.path.isfile(filename):
-                test_info.info("Skipping non file item %s" % filename)
+            filepath = self.get_file_path(filename)
+            if not os.path.isfile(filepath):
+                test_info.info("Skipping non file item %s" % filepath)
                 continue
-            with open(filename, 'rb') as file_handle:
+            skip = False
+            for pattern in FILE_IGNORE_PATTERN_LIST:
+                if pattern.match(filename):
+                    skip = True
+                    break
+            if skip:
+                continue
+
+            with open(filepath, 'rb') as file_handle:
                 file_contents = file_handle.read()
             if non_ascii_re.search(file_contents):
-                test_info.failure("Non ascii characters in %s" % filename)
+                test_info.failure("Non ascii characters in %s" % filepath)
             elif non_cr_lf_re.search(file_contents):
                 test_info.failure("File has non-standard line endings %s" %
-                                  filename)
+                                  filepath)
             elif trail_white_re.search(file_contents):
                 test_info.warning("File trailing whitespace %s" %
-                                  filename)
+                                  filepath)
             elif end_of_file_re.search(file_contents) is None:
                 test_info.warning("No newline at end of file %s" %
-                                  filename)
+                                  filepath)
             else:
-                test_info.info("File %s valid" % filename)
+                test_info.info("File %s valid" % filepath)
 
         self.test_details_txt(test_info)
 
