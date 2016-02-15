@@ -21,6 +21,7 @@
 #include "compiler.h"
 #include "macro.h"
 #include "util.h"
+#include "daplink_debug.h"
 
 // Virtual file system driver
 // Limitations:
@@ -100,6 +101,7 @@ static void write_none(uint32_t offset, const uint8_t* data, uint32_t size);
 
 static uint32_t read_mbr(uint32_t offset, uint8_t* data, uint32_t size);
 static uint32_t read_fat(uint32_t offset, uint8_t* data, uint32_t size);
+static void write_fat(uint32_t offset, const uint8_t* data, uint32_t size);
 static uint32_t read_dir1(uint32_t offset, uint8_t* data, uint32_t size);
 static void write_dir1(uint32_t offset, const uint8_t* data, uint32_t size);
 static void file_change_cb_stub(const vfs_filename_t filename, vfs_file_change_t change,
@@ -185,7 +187,7 @@ enum virtual_media_idx_t{
 const virtual_media_t virtual_media_tmpl[] = {
     /*  Read CB         Write CB        Region Size                 Region Name     */
     {   read_mbr,       write_none,     VFS_SECTOR_SIZE         },  /* MBR          */
-    {   read_fat,       write_none,     0 /* Set at runtime */  },  /* FAT1         */
+    {   read_fat,       write_fat,      0 /* Set at runtime */  },  /* FAT1         */
     {   read_fat,       write_none,     0 /* Set at runtime */  },  /* FAT2         */
     {   read_dir1,      write_dir1,     VFS_SECTOR_SIZE         },  /* Root Dir 1   */
     {   read_zero,      write_none,     VFS_SECTOR_SIZE         }   /* Root Dir 2   */
@@ -238,10 +240,10 @@ uint32_t data_start;
 // Virtual media must be larger than the template
 COMPILER_ASSERT(sizeof(virtual_media) > sizeof(virtual_media_tmpl));
 
-static void write_fat(file_allocation_table_t * fat, uint32_t idx, uint16_t val)
+static void write_fat_idx(file_allocation_table_t * fat, uint32_t idx, uint16_t val)
 {
-    uint8_t low_idx;
-    uint8_t high_idx;
+    uint32_t low_idx;
+    uint32_t high_idx;
     uint8_t low_data;
     uint8_t high_data;
 
@@ -259,6 +261,20 @@ static void write_fat(file_allocation_table_t * fat, uint32_t idx, uint16_t val)
         high_data = (val >> 8) & 0x0F;
         fat->f[low_idx] =  low_data;
         fat->f[high_idx] = fat->f[high_idx] | high_data;
+    }
+}
+
+static uint16_t read_fat_idx(file_allocation_table_t * fat, uint32_t idx)
+{
+    uint32_t low_idx;
+    uint32_t high_idx;
+
+    low_idx = idx * 3 / 2;
+    high_idx = idx * 3 / 2 + 1;
+    if (idx & 1) {
+        return (fat->f[high_idx] << 4) | ((fat->f[low_idx] & 0xF0) >> 4);
+    } else {
+        return fat->f[low_idx] | ((fat->f[high_idx] & 0x0F) << 8);
     }
 }
 
@@ -297,9 +313,9 @@ void vfs_init(const vfs_filename_t drive_name, uint32_t disk_size)
 
     // Initialize FAT
     fat_idx = 0;
-    write_fat(&fat, fat_idx, 0xFF8);    // Media type "media_descriptor"
+    write_fat_idx(&fat, fat_idx, 0xFF8);    // Media type "media_descriptor"
     fat_idx++;
-    write_fat(&fat, fat_idx, 0xFFF);    // No meaning
+    write_fat_idx(&fat, fat_idx, 0xFFF);    // No meaning
     fat_idx++;
 
     // Initialize root dir
@@ -333,10 +349,10 @@ vfs_file_t vfs_create_file(const vfs_filename_t filename, vfs_read_cb_t read_cb,
     if (len > 0) {
         first_cluster = fat_idx;
         for (i = 0; i < clusters - 1; i++) {
-            write_fat(&fat, fat_idx, fat_idx + 1);
+            write_fat_idx(&fat, fat_idx, fat_idx + 1);
             fat_idx++;
         }
-        write_fat(&fat, fat_idx, 0xFFF);
+        write_fat_idx(&fat, fat_idx, 0xFFF);
         fat_idx++;
     }
 
@@ -507,7 +523,66 @@ static uint32_t read_fat(uint32_t sector_offset, uint8_t* data, uint32_t num_sec
     return read_size;
 }
 
-/* No need to handle writes to the fat */
+static void write_fat(uint32_t sector_offset, const uint8_t* data, uint32_t num_sectors)
+{
+    uint32_t i;
+    uint32_t start_cluster;
+    uint32_t cluster_count;
+    if (sector_offset != 0) {
+        return;
+    }
+
+    start_cluster = 0;
+    cluster_count = 0;
+    for (i = 2; i <= 340; i++) {
+        uint32_t next_cluster = read_fat_idx((file_allocation_table_t *)data, i);
+        if ((0 == start_cluster) && (next_cluster != 0)) {
+            debug_msg("Cluster chain starting at %i\r\n", i);
+            start_cluster = i;
+            cluster_count = 0;
+        }
+        cluster_count += 1;
+        if (0 == next_cluster) {
+            // Free cluster
+            if (start_cluster != 0) {
+                debug_msg("    Free cluster found in chain at %i\r\n", start_cluster);
+            }
+            start_cluster = 0;
+            cluster_count = 0;
+            continue;
+        }
+        if (i + 1 == next_cluster) {
+            // Sequential cluster
+            continue;
+        }
+        if (0xFFF == next_cluster) {
+            // End of cluster chain
+            debug_msg("    Cluster chain end, size=%i\r\n", cluster_count);
+            start_cluster = 0;
+            cluster_count = 0;
+            continue;
+        }
+        if (next_cluster >= 0xFF7) {
+            //BAD CLUSTER
+            debug_msg("    Bad cluster in chain %i\r\n", i);
+            start_cluster = 0;
+            cluster_count = 0;
+            continue;
+        }
+        debug_msg("    Non sequential cluster %i->%i\r\n", i, next_cluster);
+        start_cluster = 0;
+        cluster_count = 0;
+        continue;
+        // NON-SEQUENTIAL cluster
+        
+    }
+    //debug_msg("raw fat: ");
+    //for (i = 0; i < 512; i++) {
+    //    debug_msg("%02x", data[i]);
+    //}
+    //debug_msg("\r\n");
+
+}
 
 static uint32_t read_dir1(uint32_t sector_offset, uint8_t* data, uint32_t num_sectors)
 {
