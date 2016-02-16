@@ -257,6 +257,12 @@ static uint32_t read_file_details_txt(uint32_t sector_offset, uint8_t* data, uin
     pos += util_write_uint32(buf + pos, GIT_LOCAL_MODS);
     pos += util_write_string(buf + pos, "\r\n");
 
+    // Reset count
+    
+    pos += util_write_string(buf + pos, "Reset count: ");
+    pos += util_write_uint32(buf + pos, config_ram_get_reset_count());
+    pos += util_write_string(buf + pos, "\r\n");
+
     // Supported USB endpoints
     pos += util_write_string(buf + pos, "USB Interfaces: ");
     #ifdef MSC_ENDPOINT

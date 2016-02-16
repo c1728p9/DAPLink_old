@@ -38,6 +38,7 @@ typedef struct __attribute__ ((__packed__)) cfg_ram {
     char assert_file_name[64 + 1];
     uint16_t assert_line;
     uint8_t assert_source;
+    uint32_t reset_count;
 
     // Add new members here
 
@@ -51,6 +52,9 @@ static cfg_ram_t config_ram_copy;
 void config_init()
 {
     uint32_t new_size;
+    // 1. Clear necissary values
+    // 2. Don't touch ram outside of the structure
+    // 3. Update persistent values
 
     // Initialize RAM copy
     memset(&config_ram_copy, 0, sizeof(config_ram_copy));
@@ -75,6 +79,7 @@ void config_init()
            sizeof(config_ram_copy.assert_file_name));
     config_ram.assert_line =  config_ram_copy.assert_line;
     config_ram.assert_source =  config_ram_copy.assert_source;
+    config_ram.reset_count = config_ram_copy.reset_count + 1;
 
     config_rom_init();
 }
@@ -171,4 +176,9 @@ bool config_ram_get_assert(char * buf, uint16_t buf_size, uint16_t * line, asser
         *source = (assert_source_t)config_ram.assert_source;
     }
     return true;
+}
+
+uint32_t config_ram_get_reset_count()
+{
+    return config_ram_copy.reset_count;
 }
