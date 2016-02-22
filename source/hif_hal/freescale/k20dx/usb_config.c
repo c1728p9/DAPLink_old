@@ -133,7 +133,7 @@
 #define USBD_HID_EP_INTOUT          1
 #define USBD_HID_EP_INTIN_STACK     0
 #define USBD_HID_WMAXPACKETSIZE     64
-#define USBD_HID_BINTERVAL          1
+#define USBD_HID_BINTERVAL          32
 #define USBD_HID_HS_ENABLE          0
 #define USBD_HID_HS_WMAXPACKETSIZE  64
 #define USBD_HID_HS_BINTERVAL       6
