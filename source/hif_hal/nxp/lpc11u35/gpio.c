@@ -33,8 +33,8 @@ static OS_TID isr_notify;
 #endif
 
 #ifdef SW_RESET_BUTTON
-#define RESET_PORT        (0)
-#define RESET_PIN         (1)
+#define RESET_PORT        (1)
+#define RESET_PIN         (19)
 #define RESET_INT_CH      (0)
 #define RESET_INT_MASK    (1 << RESET_INT_CH)
 #endif
@@ -42,6 +42,61 @@ static OS_TID isr_notify;
 #define PIN_DAP_LED       (1<<21)
 #define PIN_MSD_LED       (1<<20)
 #define PIN_CDC_LED       (1<<11)
+
+
+volatile uint32_t TimeTick = 0;
+
+#define SYSTICK_TICKSPERSEC 100
+#define SYSTICK_DELAY_CYCLES (SystemCoreClock/SYSTICK_TICKSPERSEC)
+#define INTERNAL_RC_HZ 12000000
+
+#define WDTCLK_SRC_IRC_OSC          0
+#define WDTCLK_SRC_WDT_OSC          1
+
+
+/* This data must be global so it is not read from the stack */
+typedef void (*IAP)(uint32_t [], uint32_t []);
+IAP iap_entry = (IAP)0x1fff1ff1;
+uint32_t command[5], result[4];
+#define init_msdstate() *((uint32_t *)(0x10000054)) = 0x0
+
+/* This function resets some microcontroller peripherals to reset
+   hardware configuration to ensure that the USB In-System Programming module
+   will work properly. It is normally called from reset and assumes some reset
+   configuration settings for the MCU.
+   Some of the peripheral configurations may be redundant in your specific
+   project.
+*/
+void ReinvokeISP(void)
+{
+  /* make sure USB clock is turned on before calling ISP */
+  LPC_SYSCON->SYSAHBCLKCTRL |= 0x04000;
+  /* make sure 32-bit Timer 1 is turned on before calling ISP */
+  LPC_SYSCON->SYSAHBCLKCTRL |= 0x00400;
+  /* make sure GPIO clock is turned on before calling ISP */
+  LPC_SYSCON->SYSAHBCLKCTRL |= 0x00040;
+  /* make sure IO configuration clock is turned on before calling ISP */
+  LPC_SYSCON->SYSAHBCLKCTRL |= 0x10000;
+
+  /* make sure AHB clock divider is 1:1 */
+  LPC_SYSCON->SYSAHBCLKDIV = 1;
+
+  /* Send Reinvoke ISP command to ISP entry point*/
+  command[0] = 57;
+
+  init_msdstate();					 /* Initialize Storage state machine */
+  /* Set stack pointer to ROM value (reset default) This must be the last
+     piece of code executed before calling ISP, because most C expressions
+     and function returns will fail after the stack pointer is changed. */
+  __set_MSP(*((volatile uint32_t *)0x00000000));
+
+  /* Enter ISP. We call "iap_entry" to enter ISP because the ISP entry is done
+     through the same command interface as IAP. */
+  iap_entry(command, result);
+  // Not supposed to come back!
+}
+
+
 
 void gpio_init(void) {
     // enable clock for GPIO port 0
@@ -68,6 +123,11 @@ void gpio_init(void) {
 
     /* Enable AHB clock to the FlexInt, GroupedInt domain. */
     LPC_SYSCON->SYSAHBCLKCTRL |= ((1<<19) | (1<<23) | (1<<24));
+    
+    if (gpio_get_sw_reset() == 0) {
+        ReinvokeISP();
+    }
+    
 }
 
 void gpio_set_hid_led(gpio_led_state_t state) {
