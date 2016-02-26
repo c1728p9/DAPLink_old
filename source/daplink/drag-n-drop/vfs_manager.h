@@ -69,6 +69,14 @@ void vfs_user_file_change_handler(const vfs_filename_t filename, vfs_file_change
 // Called when VFS is disconnecting
 void vfs_user_disconnecting(void);
 
+//TODO - this should be moved into its own header
+// Private functions below
+
+// Create files containing information (ram/rom) from the target
+void vfs_target_info_build_filesystem(uint8_t scratch_buffer[VFS_SECTOR_SIZE]);
+// Configure the target so it is in a state where info can be read
+// Returns true if target has been configured
+bool vfs_target_info_enable(bool on);
 
 #ifdef __cplusplus
 }

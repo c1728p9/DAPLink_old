@@ -55,6 +55,7 @@ static uint8_t file_buffer[VFS_SECTOR_SIZE];
 static char assert_buf[64 + 1];
 static uint16_t assert_line;
 static assert_source_t assert_source;
+static bool dump_mode = false;
 
 static uint32_t get_file_size(vfs_read_cb_t read_func);
 
@@ -108,6 +109,14 @@ void vfs_user_build_filesystem()
         file_size = get_file_size(read_file_need_bl_txt);
         vfs_create_file("NEED_BL TXT", read_file_need_bl_txt, 0, file_size);
     }
+
+    if (dump_mode) {
+        //RESUME.ACT
+        vfs_create_file("RESUME  ACT", 0, 0, 0);
+
+        // Dump files
+        vfs_target_info_build_filesystem(file_buffer);
+    }
 }
 
 // Callback to handle changes to the root directory.  Should be used with vfs_set_file_change_callback
@@ -150,6 +159,12 @@ void vfs_user_file_change_handler(const vfs_filename_t filename, vfs_file_change
         } else if (!memcmp(filename, "AUTO_OFFCFG", sizeof(vfs_filename_t))) {
             config_set_automation_allowed(false);
             vfs_mngr_fs_remount();
+        } else if (!memcmp(filename, "DUMP    ACT", sizeof(vfs_filename_t))) {
+            if (vfs_target_info_enable(true)) {
+                // Only enter dump mode if target info could be enabled
+                dump_mode = true;
+            }
+            vfs_mngr_fs_remount();
         }
     }
 
@@ -157,6 +172,11 @@ void vfs_user_file_change_handler(const vfs_filename_t filename, vfs_file_change
         if (!memcmp(filename, assert_file, sizeof(vfs_filename_t))) {
             // Clear assert and remount to update the drive
             util_assert_clear();
+            vfs_mngr_fs_remount();
+        }
+        if (!memcmp(filename, "RESUME  ACT", sizeof(vfs_filename_t))) {
+            vfs_target_info_enable(false);
+            dump_mode = false;
             vfs_mngr_fs_remount();
         }
     }
@@ -173,6 +193,20 @@ void vfs_user_disconnecting()
         NVIC_SystemReset();
     }
 }
+
+__attribute__((weak))
+void vfs_target_info_build_filesystem(uint8_t scratch_buffer[VFS_SECTOR_SIZE])
+{
+    // Stub - Do nothing if this feature is not enabled
+}
+
+__attribute__((weak))
+bool vfs_target_info_enable(bool on)
+{
+    // Stub - Do nothing if this feature is not enabled
+    return false;
+}
+
 
 // Get the filesize from a filesize callback.
 // The file data must be null terminated for this to work correctly.
