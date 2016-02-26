@@ -166,3 +166,15 @@ projects:
         - *module_if
         - *module_hif_lpc11u35
         - records/target/lpc1768_c027.yaml
+    lpc11u35_arm-watch-stm32f411_if:
+        - *module_if
+        - *module_hif_lpc11u35
+        - records/target/stm32f411_arm-watch.yaml
+    lpc11u35_arm-watch-efm32_if:
+        - *module_if
+        - *module_hif_lpc11u35
+        - records/target/efm32gg_arm-watch.yaml
+    lpc11u35_arm-watch-nrf51_if:
+        - *module_if
+        - *module_hif_lpc11u35
+        - records/target/nrf51822_arm-watch.yaml
