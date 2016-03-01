@@ -72,11 +72,11 @@ COMPILER_ASSERT(DAPLINK_HIF_ID == DAPLINK_HIF_ID_LPC11U35);
 #define PIN_nRESET_IOCON                LPC_IOCON->PIO0_2
 #define PIN_nRESET_IOCON_INIT           (FUNC_0 | OPENDRAIN | PULL_UP_ENABLED)
 
-// SWCLK/TCK Pin                        PIO0_7
+// SWCLK/TCK Pin                        PIO0_9
 #define PIN_SWCLK_PORT                  0
-#define PIN_SWCLK_BIT                   7
+#define PIN_SWCLK_BIT                   9
 #define PIN_SWCLK                       (1 << PIN_SWCLK_BIT)
-#define PIN_SWCLK_TCK_IOCON             LPC_IOCON->PIO0_7
+#define PIN_SWCLK_TCK_IOCON             LPC_IOCON->PIO0_9
 #define PIN_SWCLK_TCK_IOCON_INIT        (FUNC_0 | PULL_UP_ENABLED)
 
 // SWDIO/TMS In/Out Pin                 PIO0_8
