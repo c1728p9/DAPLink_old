@@ -124,7 +124,9 @@ static error_t target_flash_erase_chip(void)
     if (0 == swd_flash_syscall_exec(&flash->sys_call_s, flash->erase_chip, 0, 0, 0, 0)) {
         return ERROR_ERASE_ALL;
     }
-    return ERROR_SUCCESS;
+    // reset and re-initialize flash programming.
+    // This is required on nrf targets so the UICR is properly updated
+    return target_flash_init();
 }
 
 static uint32_t target_flash_program_page_min_size(uint32_t addr)
