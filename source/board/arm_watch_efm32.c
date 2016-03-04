@@ -15,3 +15,5 @@
  */
 
 const char * board_id = "5051";
+__attribute__((aligned (4)))
+const char daplink_drive_name[11] = "DAP_EFM    ";
