@@ -86,9 +86,9 @@ VERB_LEVELS = [VERB_MINIMAL, VERB_NORMAL, VERB_VERBOSE, VERB_ALL]
 def test_endpoints(workspace, parent_test):
     """Run tests to validate DAPLINK fimrware"""
     test_info = parent_test.create_subtest('test_endpoints')
-    test_hid(workspace, test_info)
+    #test_hid(workspace, test_info)
     test_serial(workspace, test_info)
-    test_mass_storage(workspace, test_info)
+    #test_mass_storage(workspace, test_info)
 
 
 class TestConfiguration(object):
@@ -230,8 +230,8 @@ class TestManager(object):
 
             board.set_check_fs_on_remount(True)
 
-            if self._test_daplink:
-                daplink_test(test_configuration, test_info)
+            #if self._test_daplink:
+            #    daplink_test(test_configuration, test_info)
 
             if self._test_ep:
                 test_endpoints(test_configuration, test_info)
