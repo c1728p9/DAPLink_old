@@ -598,7 +598,7 @@ void USB_IRQHandler (void) {
 
 void USBD_Handler (void) {
 
-  U32 sts, val, num, i;
+  U32 sts, val, num;
 
   sts = LPC_USB->INTSTAT;
   LPC_USB->INTSTAT = sts;
@@ -688,11 +688,7 @@ void USBD_Handler (void) {
 
   /* EndPoint Interrupt                                                       */
   if (sts & 0x3FF) {
-    const uint32_t endpoint_count = ((USBD_EP_NUM + 1) * 2);
-    for (i = 0; i < endpoint_count; i++) {
-      // Iterate through endpoints in the reverse order so IN endpoints
-      // get processed before OUT endpoints if they are both pending.
-      num = endpoint_count - i - 1;
+    for (num = 0; num < ((USBD_EP_NUM + 1) * 2); num++) {
       if (sts & (1UL << num)) {
 
         /* Setup                                                              */
