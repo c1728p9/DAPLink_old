@@ -1,21 +1,37 @@
 # DAPLink
+DAPLink is firmware that runs on Hardware Interface Circuits (HICs) and provides methods to program and debug a microcontroller via JTAG or SWD. The firware exposes a USB composite device to the host OS with CDC, HID and MSC endpoints. These endpoints are critical when developing software for microcontrollers. Description of endpoints:
+* MSC - drag-n-drop programming of binary and hex files
+* CDC - Virtual com port for USB to UART for log, trace and terminal emulation
+* HID - CMSIS-DAP compliant debug channel.
 
-## Setup
-Skip any step where a compatible tool already exists
+For more detailed information see the user guide.
 
-1. Install [Python 2.7.9 or above](https://www.python.org/downloads/) and make sure it's added to path
-2. Install [Git](https://git-scm.com/downloads) and make sure it's added to path
-3. Install [Keil MDK-ARM](https://www.keil.com/download/product/)
-4. Install virtualenv in python
+## Compatibility
+There are many Hardware Interface Circuits (HICs) that DAPLink firmware runs on. These can be found as standalone boards or as part of development kits. Known supported circuits are based on and compatible with:
+* Atmel edbg (SAM3U) - coming soon
+* Maxim Epsilon (MAX32550) - coming soon
+* [NXP OpenSDA](http://www.nxp.com/products/software-and-tools/run-time-software/kinetis-software-and-tools/ides-for-kinetis-mcus/opensda-serial-and-debug-adapter:OPENSDA)
+* [NXP Link based on LPC11U35 or LPC4322](https://www.lpcware.com/LPCXpressoBoards)
 
+## Releases
+There are many HIC and target combinations created from this repository. Quarterly releases will contain new features and bugfixes. Standalone bugfixes are released once reported, verified and fixed. Both quarterly and bugfix releases will result in the build number being incremented, however, not all HIC and targets will be released if not affected. Release notes and all artifacts can be found under releases. **Products shipping or compatible with this firmware should have instructions on how to upgrade and the most up to date release build on the product page.**
+
+## Develop
+Install necessary tools. Skip any step where a compatible tool already exists. All tools **MUST** be added to the system path
+
+* Install [Python 2.7.9 or above](https://www.python.org/downloads/)
+* Install [Git](https://git-scm.com/downloads)
+* Install [Keil MDK-ARM](https://www.keil.com/download/product/)
+* Install virtualenv in your global Python installation
+
+1. Get the sources and create a virtual environment
 ```
 > git clone https://github.com/mbedmicro/DAPLink
 > pip install virtualenv
 > virtualenv venv
 ```
 
-## Develop
-1. Update tools and generate project files. This should be done everytime you pull new changes
+2. Update tools and generate project files. **This should be done everytime you pull new changes**
 ```
 > "venv/Scripts/activate"
 > pip install -r requirements.txt
