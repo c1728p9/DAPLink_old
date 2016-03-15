@@ -4,7 +4,7 @@ DAPLink is firmware that runs on Hardware Interface Circuits (HICs). It provides
 * CDC - Virtual com port for log, trace and terminal emulation
 * HID - CMSIS-DAP compliant debug channel
 
-For more detailed information [see the user guide.](https://github.com/mbedmicro/DAPLink/USER-GUIDE.md)
+For more detailed information [see the user guide.](USER-GUIDE.md)
 
 This project supersceeds the [mbed CMSIS-DAP interface firmware project.](https://github.com/mbedmicro/CMSIS-DAP/)
 
@@ -22,4 +22,4 @@ There are many HIC and target combinations created from this repository. Quarter
 Look for an interesting feature or defect [under issues](https://github.com/mbedmicro/DAPLink/issues) or start a new thread to engage with the developers and maintainers. You must sign the [contributor agreement](https://developer.mbed.org/contributor_agreement/) before any contributions can be accepted.
 
 ## Develop
-Information for setting up a development environment, running the tests or creating a release build [can be found in the porting guide.](https://github.com/mbedmicro/DAPLink/PORTING.md)
+Information for setting up a development environment, running the tests or creating a release build [can be found in the porting guide.](PORTING.md)

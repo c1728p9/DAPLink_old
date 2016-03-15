@@ -34,5 +34,5 @@ $ deactivate
 ## Testing
 
 ## Release
-Docs on [how to create a release](https://github.com/mbedmicro/DAPLink/RELEASE.md)
+Docs on [how to create a release](RELEASE.md)
 
