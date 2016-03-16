@@ -76,7 +76,7 @@ const char *board_id = "0000";
 Now running `progen generate -t uvision` will create project files including the new board that can be developed and debugged. For more information about the yaml format [see the project_generator documentation.](https://github.com/project-generator/project_generator/wiki/Getting_started)
 
 ## Adding New Targets
-Adding new target support requires creating a flash algo blob and the implementation for some stub functions. Target support is added to the `source/target/<mfg>/<target>` directory. At minimum, 3 files are needed. The first is `source/<mfg>/target_reset.c'
+Adding new target support requires creating a flash algo blob and the implementation for some stub functions. Target support is added to the `source/target/<mfg>/<target>` directory. At minimum, 3 files are needed. The first is `source/<mfg>/target_reset.c`
 
 ```c
 /**
