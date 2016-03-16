@@ -136,7 +136,7 @@ uint8_t security_bits_set(uint32_t addr, uint8_t *data, uint32_t size)
 }
 ```
 
-A flash algorithm blob is needed to program the target MCUs internal (or external) flash memory. This blob contains position independent functions for erasing, reading and writing to the flash controller. Flash algorithm blobs are created from the [FlashAlgo project.](https://github.com/mbedmicro/FlashAlgo). An example blob is shown below and would be added to `source/target/<mfg>/<targetname>/flash_blob.c`
+A flash algorithm blob is needed to program the target MCUs internal (or external) flash memory. This blob contains position independent functions for erasing, reading and writing to the flash controller. Flash algorithm blobs are created from the [FlashAlgo project.](https://github.com/mbedmicro/FlashAlgo) An example blob is shown below and would be added to `source/target/<mfg>/<targetname>/flash_blob.c`
 
 ```c
 /**
