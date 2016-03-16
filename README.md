@@ -22,4 +22,4 @@ There are many board builds (board = HIC + target combination) created from this
 Look for an interesting feature or defect [under issues](https://github.com/mbedmicro/DAPLink/issues) or start a new thread to engage with the developers and maintainers. You must sign the [contributor agreement](https://developer.mbed.org/contributor_agreement/) before any contributions can be accepted.
 
 ## Develop
-Information for setting up a development environment, running the tests or creating a release build [can be found in the porting guide.](docs/PORTING.md)
+Information for setting up a development environment, running the tests or creating a release build [can be found in the develop guide.](docs/DEVELOP.md)
