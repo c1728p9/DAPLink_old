@@ -31,7 +31,8 @@ extern "C" {
 #define VFS_CLUSTER_SIZE        0x1000
 #define VFS_SECTOR_SIZE         512
 #define VFS_INVALID_SECTOR      0xFFFFFFFF
-#define VFS_FILE_INVALID        0
+#define VFS_FILE_INVALID        0xFFFFFFFF
+#define VFS_MAX_FILES           16
 
 typedef char vfs_filename_t[11];
 
@@ -53,7 +54,7 @@ typedef enum {
                                   notification will also occur*/
 } vfs_file_change_t;
 
-typedef void *vfs_file_t;
+typedef uint32_t vfs_file_t;
 typedef uint32_t vfs_sector_t;
 
 // Callback for when data is written to a file on the virtual filesystem

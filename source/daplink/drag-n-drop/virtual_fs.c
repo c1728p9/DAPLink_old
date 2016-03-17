@@ -113,6 +113,8 @@ static void file_change_cb_stub(const vfs_filename_t filename, vfs_file_change_t
 static uint32_t cluster_to_sector(uint32_t cluster_idx);
 static bool filename_valid(const vfs_filename_t filename);
 static bool filename_character_valid(char character);
+static bool can_read_file(vfs_file_t file);
+static bool can_write_file(vfs_file_t file);
 
 // If sector size changes update comment below
 COMPILER_ASSERT(0x0200 == VFS_SECTOR_SIZE);
@@ -233,7 +235,8 @@ static const FatDirectoryEntry_t dir_entry_tmpl = {
 mbr_t mbr;
 file_allocation_table_t fat;
 virtual_media_t virtual_media[16];
-root_dir_t dir;
+root_dir_t dir_current;
+FatDirectoryEntry_t dir_initial[VFS_MAX_FILES];
 uint8_t file_count;
 vfs_file_change_cb_t file_change_cb;
 uint32_t virtual_media_idx;
@@ -282,7 +285,8 @@ void vfs_init(const vfs_filename_t drive_name, uint32_t disk_size)
     memset(&fat, 0, sizeof(fat));
     fat_idx = 0;
     memset(&virtual_media, 0, sizeof(virtual_media));
-    memset(&dir, 0, sizeof(dir));
+    memset(&dir_current, 0, sizeof(dir_current));
+    memset(&dir_initial, 0, sizeof(dir_initial));
     dir_idx = 0;
     file_count = 0;
     file_change_cb = file_change_cb_stub;
@@ -312,8 +316,9 @@ void vfs_init(const vfs_filename_t drive_name, uint32_t disk_size)
     fat_idx++;
     // Initialize root dir
     dir_idx = 0;
-    dir.f[dir_idx] = root_dir_entry;
-    memcpy(dir.f[dir_idx].filename, drive_name, sizeof(dir.f[0].filename));
+    dir_initial[dir_idx] = root_dir_entry;
+    memcpy(dir_initial[dir_idx].filename, drive_name, sizeof(dir_initial[0].filename));
+    memcpy(&dir_current.f[dir_idx], &dir_initial[dir_idx], sizeof(dir_initial[0]));
     dir_idx++;
 }
 
@@ -325,10 +330,10 @@ uint32_t vfs_get_total_size()
 vfs_file_t vfs_create_file(const vfs_filename_t filename, vfs_read_cb_t read_cb, vfs_write_cb_t write_cb, uint32_t len)
 {
     uint32_t first_cluster;
-    FatDirectoryEntry_t *de;
     uint32_t clusters;
     uint32_t cluster_size;
     uint32_t i;
+    uint32_t file;
     util_assert(filename_valid(filename));
     // Compute the number of clusters in the file
     cluster_size = mbr.bytes_per_sector * mbr.sectors_per_cluster;
@@ -349,23 +354,24 @@ vfs_file_t vfs_create_file(const vfs_filename_t filename, vfs_read_cb_t read_cb,
     }
 
     // Update directory entry
-    if (dir_idx >= ELEMENTS_IN_ARRAY(dir.f)) {
+    if (dir_idx >= ELEMENTS_IN_ARRAY(dir_initial)) {
         util_assert(0);
-        return 0;
+        return VFS_FILE_INVALID;
     }
 
-    de = &dir.f[dir_idx];
+    file = dir_idx;
+    memcpy(&dir_initial[file], &dir_entry_tmpl, sizeof(dir_entry_tmpl));
+    memcpy(dir_initial[file].filename, filename, 11);
+    dir_initial[file].filesize = len;
+    dir_initial[file].first_cluster_high_16 = (first_cluster >> 16) & 0xFFFF;
+    dir_initial[file].first_cluster_low_16 = (first_cluster >> 0) & 0xFFFF;
+    memcpy(&dir_current.f[file], &dir_initial[file], sizeof(dir_initial[0]));
     dir_idx++;
-    memcpy(de, &dir_entry_tmpl, sizeof(dir_entry_tmpl));
-    memcpy(de->filename, filename, 11);
-    de->filesize = len;
-    de->first_cluster_high_16 = (first_cluster >> 16) & 0xFFFF;
-    de->first_cluster_low_16 = (first_cluster >> 0) & 0xFFFF;
 
     // Update virtual media
     if (virtual_media_idx >= ELEMENTS_IN_ARRAY(virtual_media)) {
         util_assert(0);
-        return 0;
+        return VFS_FILE_INVALID;
     }
 
     virtual_media[virtual_media_idx].read_cb = read_zero;
@@ -382,36 +388,48 @@ vfs_file_t vfs_create_file(const vfs_filename_t filename, vfs_read_cb_t read_cb,
     virtual_media[virtual_media_idx].length = clusters * mbr.bytes_per_sector * mbr.sectors_per_cluster;
     virtual_media_idx++;
     file_count += 1;
-    return de;
+    return file;
 }
 
 void vfs_file_set_attr(vfs_file_t file, vfs_file_attr_bit_t attr)
 {
-    FatDirectoryEntry_t *de = file;
-    de->attributes = attr;
+    if (!can_write_file(file)) {
+        util_assert(0);
+        return;
+    }
+    dir_initial[file].attributes = attr;
+    dir_current.f[file].attributes = attr;
 }
 
 vfs_sector_t vfs_file_get_start_sector(vfs_file_t file)
 {
-    FatDirectoryEntry_t *de = file;
-
+    if (!can_read_file(file)) {
+        util_assert(0);
+        return VFS_INVALID_SECTOR;
+    }
     if (vfs_file_get_size(file) == 0) {
         return VFS_INVALID_SECTOR;
     }
 
-    return cluster_to_sector(de->first_cluster_low_16);
+    return cluster_to_sector(dir_current.f[file].first_cluster_low_16);
 }
 
 uint32_t vfs_file_get_size(vfs_file_t file)
 {
-    FatDirectoryEntry_t *de = file;
-    return de->filesize;
+    if (!can_read_file(file)) {
+        util_assert(0);
+        return 0;
+    }
+    return dir_current.f[file].filesize;
 }
 
 vfs_file_attr_bit_t vfs_file_get_attr(vfs_file_t file)
 {
-    FatDirectoryEntry_t *de = file;
-    return (vfs_file_attr_bit_t)de->attributes;
+    if (!can_read_file(file)) {
+        util_assert(0);
+        return (vfs_file_attr_bit_t)0;
+    }
+    return (vfs_file_attr_bit_t)dir_current.f[file].attributes;
 }
 
 void vfs_set_file_change_callback(vfs_file_change_cb_t cb)
@@ -534,15 +552,25 @@ static uint32_t read_fat(uint32_t sector_offset, uint8_t *data, uint32_t num_sec
 static uint32_t read_dir(uint32_t sector_offset, uint8_t *data, uint32_t num_sectors)
 {
     uint32_t start_index;
+    uint32_t copy_size;
 
-    if ((sector_offset + num_sectors) * VFS_SECTOR_SIZE > sizeof(dir)) {
+    if ((sector_offset + num_sectors) * VFS_SECTOR_SIZE > sizeof(dir_current)) {
         // Trying to read too much of the root directory
         util_assert(0);
         return 0;
     }
 
+    // Zero buffer
+    memset(data, 0, num_sectors * VFS_SECTOR_SIZE);
     start_index = sector_offset * VFS_SECTOR_SIZE / sizeof(FatDirectoryEntry_t);
-    memcpy(data, &dir.f[start_index], num_sectors * VFS_SECTOR_SIZE);
+
+    // Copy data if anything can be copied
+    if (start_index < ELEMENTS_IN_ARRAY(dir_initial)) {
+        util_assert(sizeof(dir_initial) > sector_offset * VFS_SECTOR_SIZE);
+        copy_size = sizeof(dir_initial) - sector_offset * VFS_SECTOR_SIZE;
+        memcpy(data, &dir_initial[start_index], copy_size);
+    }
+
     return num_sectors * VFS_SECTOR_SIZE;
 }
 
@@ -554,7 +582,7 @@ static void write_dir(uint32_t sector_offset, const uint8_t *data, uint32_t num_
     uint32_t num_entries;
     uint32_t i;
 
-    if ((sector_offset + num_sectors) * VFS_SECTOR_SIZE > sizeof(dir)) {
+    if ((sector_offset + num_sectors) * VFS_SECTOR_SIZE > sizeof(dir_current)) {
         // Trying to write too much of the root directory
         util_assert(0);
         return;
@@ -562,7 +590,7 @@ static void write_dir(uint32_t sector_offset, const uint8_t *data, uint32_t num_
 
     start_index = sector_offset * VFS_SECTOR_SIZE / sizeof(FatDirectoryEntry_t);
     num_entries = num_sectors * VFS_SECTOR_SIZE / sizeof(FatDirectoryEntry_t);
-    old_entry = &dir.f[start_index];
+    old_entry = &dir_current.f[start_index];
     new_entry = (FatDirectoryEntry_t *)data;
     // If this is the first sector start at index 1 to get past drive name
     i = 0 == sector_offset ? 1 : 0;
@@ -592,7 +620,7 @@ static void write_dir(uint32_t sector_offset, const uint8_t *data, uint32_t num_
         }
     }
 
-    memcpy(&dir.f[start_index], data, num_sectors * VFS_SECTOR_SIZE);
+    memcpy(&dir_current.f[start_index], data, num_sectors * VFS_SECTOR_SIZE);
 }
 
 static void file_change_cb_stub(const vfs_filename_t filename, vfs_file_change_t change, vfs_file_t file, vfs_file_t new_file_data)
@@ -663,4 +691,14 @@ static bool filename_character_valid(char character)
 
     // All of the checks have passed so this is a valid file name character
     return true;
+}
+
+static bool can_read_file(vfs_file_t file)
+{
+    return (file < ELEMENTS_IN_ARRAY(dir_current.f)) ? true : false;
+}
+
+static bool can_write_file(vfs_file_t file)
+{
+    return (file < ELEMENTS_IN_ARRAY(dir_initial)) ? true : false;
 }
