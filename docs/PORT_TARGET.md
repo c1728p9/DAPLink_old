@@ -1,4 +1,4 @@
-## Adding A New Target
+# Adding A New Target
 Adding new target support requires creating a flash algo blob and the implementation for some stub functions. Target support is added to the `source/target/<mfg>/<target>` directory. At minimum, 3 files are needed. The first is `source/<mfg>/target_reset.c`
 
 ```c

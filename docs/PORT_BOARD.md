@@ -1,5 +1,5 @@
-## Adding A New Board
-A board is composed of a Hardware Interface Circuit and target MCU. To create a new board build a description needs to be added to `projects.yaml`. The yaml descriptions are used to create modules which can be inherited. Create a new board build by adding the prouct name and the required modules. eg: if the HIC is OpenSDA based on the NXP MK20D50 MCU
+# Adding A New Board
+A board is composed of a Hardware Interface Circuit and target MCU. To create a new board build a description needs to be added to `projects.yaml`. The yaml descriptions are used to create modules that can be inherited. Create a new board build by adding the product name and the required modules. eg: if the HIC is OpenSDA based on the NXP MK20D50 MCU
 
 ```yaml
     k20dx_myboardname_if:
@@ -8,7 +8,7 @@ A board is composed of a Hardware Interface Circuit and target MCU. To create a 
         - records/board/myboardname.yaml
 ```
 
-Next create a new file in the `records/board` dirctory called myboardname.yaml. This file defines the target MCU and allow overrideable board parameters to be configured. The target MCU in this example exists and is a Nordic nRF51822 (16k RAM variant)
+Next create a new file in the `records/board` dirctory called myboardname.yaml. This file defines the target MCU and allows overrideable board parameters to be configured. The target MCU in this example exists and is a Nordic nRF51822 (16k RAM variant)
 
 ```yaml
 common:
