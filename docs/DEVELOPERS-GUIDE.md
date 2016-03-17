@@ -46,6 +46,8 @@ DAPLink has framework that allows automatic loading and testing of software on o
 
 
 ## Release
+DAPLink contains scripts to automate most of the steps of building a release.  In addition to building the release, these scripts also save relevant build information such as git SHA and python tool versions so the same build can be reproduced.  The recommended steps for creating a release are below.
+
 * Create a tag with the correct release version and push it to github
 * Clean the repo you will be building from by running 'git clean -xdf' followed by 'git reset --hard'
 * Run the script 'build_release_uvision.bat' to create all builds.
